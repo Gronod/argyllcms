@@ -1761,6 +1761,7 @@ double pscale,		/* Test patch & spacers scale factor */
 double sscale,		/* Spacers scale factor */
 int hflag,			/* Spectroscan/Munki high density modified */
 int verb,			/* Verbose flag */
+int json_manifest,	/* Flag, emit JSON manifest to stdout */
 int scanc,			/* Scan compatible bits, 1 = .cht gen, 2 = wide first row */
 int oft,			/* PS/EPS/TIFF select (0,1,2) */
 int nocups,			/* NZ to supress cups job ticket in PS/EPS */
@@ -1782,6 +1783,8 @@ double *p_taplen,	/* Return trailer length in mm */
 int *p_npat			/* Return number of patches including padding */
 ) {
 	char psname[MAXNAMEL+20];		/* Name of output file */
+	char **page_filenames = NULL;	/* For json_manifest tracking */
+	int *page_patches = NULL;		/* For json_manifest tracking */
 	trend *tro = NULL;		/* Target rendering object */
 	double x1, y1, x2, y2;	/* Bounding box in mm */
 	double iw, ih;			/* Imagable areas width and height in mm */
@@ -2335,6 +2338,17 @@ int *p_npat			/* Return number of patches including padding */
 	npages = (tidnpat + pppage -1)/pppage;				/* whole & partial pages */
 	ppstrip = tpprow * rpstrip;							/* Real patches per full strip */
 
+	if (json_manifest) {
+		int pi;
+		if ((page_filenames = (char **)malloc(sizeof(char *) * npages)) == NULL)
+			error("Malloc failed for JSON manifest filenames");
+		if ((page_patches = (int *)calloc(npages, sizeof(int))) == NULL)
+			error("Calloc failed for JSON manifest patch counts");
+		for (pi = 0; pi < npages; pi++) {
+			page_filenames[pi] = NULL;
+		}
+	}
+
 	rem = tidnpat;						/* Total test patches to print */
 	rem -= (npages-1) * pppage;			/* Remaining patches to be printed on last page */
 
@@ -2522,6 +2536,11 @@ int *p_npat			/* Return number of patches including padding */
 						if (verb)
 							printf("Creating file '%s'\n",psname);
 					}
+					if (json_manifest && pif >= 1 && pif <= npages) {
+						if (page_filenames[pif-1] != NULL)
+							free(page_filenames[pif-1]);
+						page_filenames[pif-1] = strdup(psname);
+					}
 					tro->startpage(tro,pif);
 
 					/* Print all the row labels */
@@ -2589,6 +2608,10 @@ int *p_npat			/* Return number of patches including padding */
 			if (pir > tidpad && pir <= (tidpad + tidminp) ) {
 				int opir = pir - tidpad -1;	/* TID index 0 .. tidminp-1 */
 				
+				if (json_manifest && pif >= 1 && pif <= npages) {
+					page_patches[pif-1]++;
+				}
+
 				if (opir == 0) {
 					cp = &pcol[1];	/* Cyan */
 
@@ -2687,6 +2710,12 @@ int *p_npat			/* Return number of patches including padding */
 				}
 				strcpy(cols[ix].loc, sp);		/* Record location */
 				cp = &cols[ix];					/* Get color for this patch */
+
+				if (json_manifest && pif >= 1 && pif <= npages) {
+					if (!(cols[ix].t & T_PAD)) {
+						page_patches[pif-1]++;
+					}
+				}
 
 				i++;							/* Consumed a test patch */
 				if (i > npat)
@@ -2882,6 +2911,28 @@ int *p_npat			/* Return number of patches including padding */
 	*rpsp++ = 0;	/* End of rows per strip stuff */
 
 	et_clear();		/* Cleanup edge list structures */
+
+	if (json_manifest) {
+		int pi;
+		printf("{\n");
+		printf("  \"event\": \"manifest\",\n");
+		printf("  \"pages\": [\n");
+		for (pi = 0; pi < npages; pi++) {
+			printf("    {\"filename\": \"%s\", \"patches\": %d, \"width_mm\": %g, \"height_mm\": %g}%s\n",
+				page_filenames[pi] != NULL ? page_filenames[pi] : "",
+				page_patches[pi],
+				pw,
+				ph,
+				(pi < npages - 1) ? "," : "");
+			if (page_filenames[pi] != NULL)
+				free(page_filenames[pi]);
+		}
+		printf("  ]\n");
+		printf("}\n");
+		fflush(stdout);
+		free(page_filenames);
+		free(page_patches);
+	}
 }
 
 /* A paper size structure */
@@ -2932,8 +2983,9 @@ void usage(char *diag, ...) {
 		va_end(args);
 		fprintf(stderr,"\n");
 	}
-	fprintf(stderr,"usage: printtarg [-v] [-i instr] [-r] [-s] [-p size] basename\n");
+	fprintf(stderr,"usage: printtarg [-v] [-u] [-i instr] [-r] [-s] [-p size] basename\n");
 	fprintf(stderr," -v               Verbose mode\n");
+	fprintf(stderr," -u               Emit JSON manifest of generated target pages on stdout\n");
 	fprintf(stderr," -i 20 | 22 | 41 | 51 | SS | i1 | p3 | CM Select target instrument (default i1)\n");
 	fprintf(stderr,"                  i1 = i1Pro, 3p = i1Pro3+, CM = ColorMunki\n");
 	fprintf(stderr,"                  20 = DTP20, 22 = DTP22, 41 = DTP41, 51 = DTP51,\n");
@@ -2980,6 +3032,7 @@ void usage(char *diag, ...) {
 int main(int argc, char *argv[]) {
 	int fa, nfa, mfa;		/* argument we're looking at */
 	int verb = 0;
+	int json_manifest = 0;	/* Emit JSON manifest */
 	int hflag = 0;			/* Hexagon patches for SS, high density for CM */
 	double pscale = 1.0;	/* Patch size scale */
 	double sscale = 1.0;	/* Spacer size scale */
@@ -3084,6 +3137,10 @@ int main(int argc, char *argv[]) {
 			/* Verbosity */
 			else if (argv[fa][1] == 'v')
 				verb = 1;
+
+			/* JSON manifest */
+			else if (argv[fa][1] == 'u')
+				json_manifest = 1;
 
 			/* hflag patches */
 			else if (argv[fa][1] == 'h')
@@ -3737,7 +3794,7 @@ int main(int argc, char *argv[]) {
 	generate_file(itype, itype_mod, psname, cols, npat, applycal ? cal : NULL, label,
 	            pap != NULL ? pap->w : cwidth, pap != NULL ? pap->h : cheight,
 	            marg, nosubmarg, nollimit, nolpcbord, rand, rstart, saix, paix,	ixord,
-	            pscale, sscale, hflag, verb, scanc, oft, nocups, tiffdpth, tiffres, ncha, tiffdith,
+	            pscale, sscale, hflag, verb, json_manifest, scanc, oft, nocups, tiffdpth, tiffres, ncha, tiffdith,
 	            tiffcomp, spacer, nmask, altrep, pcol, wp,
 	            &sip, &pis, &plen, &glen, &tlen, &nppat);
 
