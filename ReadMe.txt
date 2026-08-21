@@ -1,9 +1,9 @@
-
 Argyll CMS README file - Version 3.5.0
 --------------------------------------
 
-Date: 4th February 2026
-Author: Graeme Gill
+Date: 21st August 2026
+Original Author: Graeme W. Gill
+Fork Maintainer: Gordon Bolton (gronod) <gordon@i3omb.com>
 
 Introduction
 
@@ -30,15 +30,39 @@ This is Version 3.5.0, a bug fix update to the release V3.4.1.
 The first public release of icclib was in November 1998,
 and of Argyll was in October 2000. Code development commenced in 1995. See
 Changes Summary for an overview of changes since the last release. Changes
-between revisions is detailed in the log.txt file that accompanies the source code. 
+between revisions is detailed in the log.txt file that accompanies the source code.
 
 Modifications in this fork:
 --------------------------
-- Added `-u` command-line switch to `chartread` to emit real-time row-level
-  and patch-level colour measurement events in JSON format (`ROW_COLORS_JSON: ...`)
-  to `stdout` for external UI / subprocess integration.
+Based on the upstream ArgyllCMS V3.5.0 release, this fork adds structured
+JSON output capabilities (via a common `-u` switch) to several tools so they
+can be driven as isolated subprocesses by external UIs while preserving
+AGPLv3 licence isolation (no library linking; communication over stdin /
+stdout / stderr only).
 
-Original Author: Graeme W. Gill
+Changes merged into main:
+
+- **chartread** (`-u`): Real-time row-level and patch-level colour
+  measurement events (`ROW_COLORS_JSON: ...`) containing device values,
+  measured / expected XYZ & D50 Lab, and optional spectral data.
+
+- **instlist**: New utility that enumerates connected instruments and emits
+  the result as structured JSON.
+
+- **printtarg** (`-u`): Emits a structured JSON target manifest describing
+  the generated chart.
+
+- **targen** (`-u`): Structured JSON progress output while generating test
+  chart values.
+
+- **profcheck** (`-u`): Structured JSON Delta E report.
+
+- **colprof** (`-u`): Structured JSON calculation / progress reporting
+  during profile creation.
+
+Supporting documentation for the chartread JSON stream protocol, payload
+schema, process lifecycle, and AGPL isolation guidelines is also included.
+
 Modified source code repository: https://git.i3omb.com/gronod/argyllcms
 
 License:
@@ -52,9 +76,12 @@ For more detailed information, please consult the HTML documentation in
 
 For the upstream source code start at <http://www.argyllcms.com/index.html>.
 
-Contact Graeme in regards to original Argyll, icclib or cgatslib at:
-
+Contact:
+--------
+Original Argyll, icclib or cgatslib:
 	Graeme at argyllcms dot com
 
-Enjoy!
+This fork and the JSON streaming (`-u`) modifications:
+	Gordon Bolton <gordon@i3omb.com>
 
+Enjoy!
