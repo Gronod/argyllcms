@@ -49,6 +49,7 @@ Verbose
 
 
       mode</tt><tt><br>
+    </tt>    <tt> &nbsp;</tt><tt><a href="#u">-u</a></tt><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Emit real-time JSON stream of row patch data to stdout</tt><tt><br>
     </tt><tt> &nbsp;</tt><tt><a href="#c">-c listno</a></tt><tt> &nbsp;
       &nbsp;&nbsp; &nbsp;&nbsp;&nbsp; Set communication port from the
       following list (default 1)</tt><tt><br>
@@ -655,6 +656,8 @@ Override
     <h3>Usage Details</h3>
     <a name="v"></a>The <b>-v</b> flag causes extra information to be
     printed out during chartread operation.<br>
+    <br>
+    <a name="u"></a>The <b>-u</b> flag enables real-time JSON streaming of row patch data to stdout. Each time a row is completed (either forward or reverse), a JSON object containing the expected and measured patch data, along with padding indicators, is emitted prefixed by <code>ROW_COLORS_JSON:</code>. This is designed for GUI applications wrapping chartread to display live swatches and calculate color differences during reading.<br>
     <br>
     <a name="c"></a>Normally instruments are connected via a serial
     communication port, and the port used should be selected by
