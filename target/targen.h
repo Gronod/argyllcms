@@ -26,6 +26,8 @@ struct _fxpos {
 	int eloc;			/* if >= 0, cgats index, to even location */
 }; typedef struct _fxpos fxpos;
 
+extern int json_progress;
+void emit_json_progress(const char *stage, int percent);
 
 #define TARGEN_H
 #endif /* TARGEN_H */

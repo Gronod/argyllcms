@@ -158,6 +158,14 @@
 
 /* ---------------------------- */
 
+int json_progress = 0;
+
+void emit_json_progress(const char *stage, int percent) {
+	if (!json_progress) return;
+	printf("{\"event\": \"progress\", \"stage\": \"%s\", \"percent\": %d}\n", stage, percent);
+	fflush(stdout);
+}
+
 static double spow(double v, double p) {
 	if (v < 0.0)
 		return -pow(-v, p);
@@ -979,6 +987,7 @@ usage(int level, char *diag, ...) {
 		fprintf(stderr,"\n");
 	}
 	fprintf(stderr," -v [level]      Verbose mode [optional level 1..N]\n");
+	fprintf(stderr," -u              Emit structured JSON progress events to stdout\n");
 	fprintf(stderr," -d col_comb     choose colorant combination from the following:\n");
 	for (i = 0; ; i++) {
 		char *desc; 
@@ -1169,6 +1178,11 @@ int main(int argc, char *argv[]) {
 					verb = atoi(na);
 					fa = nfa;
 				}
+			}
+
+			/* Emit structured JSON progress events to stdout */
+			else if (argv[fa][1] == 'u') {
+				json_progress = 1;
 			}
 
 			/* Select the ink enumeration */
@@ -2585,6 +2599,7 @@ int main(int argc, char *argv[]) {
 			/* Create more points up to fsteps */
 			if (verb)
 				printf("\n");
+			int last_pct = -1;
 			for (j = 0, i = fxno; i < fsteps;) {
 				int e;
 				double sum;
@@ -2642,6 +2657,13 @@ int main(int argc, char *argv[]) {
 
 				if (verb) {
 					printf("%cAdded %d/%d",cr_char,i+1,fxno); fflush(stdout);
+				}
+				if (json_progress && fsteps > 0) {
+					int pc = (int)(100.0 * (i + 1) / fsteps);
+					if (pc != last_pct) {
+						last_pct = pc;
+						emit_json_progress("generating", pc);
+					}
 				}
 				i++, j++;
 			}
@@ -3032,10 +3054,16 @@ int main(int argc, char *argv[]) {
 						printf("%c%2d%%",cr_char,(int)(100.0 * (chend-1 - noswapped)/(npat-1.0)));
 						fflush(stdout);
 					}
+					if (json_progress && npat > 1) {
+						int pc = (int)(100.0 * (chend-1 - noswapped)/(npat-1.0));
+						emit_json_progress("optimising", pc);
+					}
 				}
 			}
 			if (verb)
 				printf("%c%2d%%",cr_char,100); fflush(stdout);
+			if (json_progress)
+				emit_json_progress("optimising", 100);
 		}
 		if (verb)
 			printf("\nOptimised display response delay = %f sec.\n",udelay);

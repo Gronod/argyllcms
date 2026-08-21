@@ -17,6 +17,8 @@
     <p><span style="font-family: monospace;">targen [options] <i>outfile</i><br>
         <a href="#v">-v [level]</a> &nbsp;&nbsp;&nbsp;Verbose mode [optional
         verbose level, 1..n]<br>
+        <a href="#u">-u</a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Emit
+        structured JSON progress events to stdout<br>
         <a href="#d">-d col_comb</a> &nbsp;&nbsp;choose colorant combination
         from the following:<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0:
@@ -527,6 +529,12 @@ incremental
     <a name="v"></a> The <b>-v</b> flag turns on extra verbosity when
     generating patch values. Extra diagnostics and verbosity may be available if
     a parameter is provided with a value greater than 1.<br>
+    <br>
+    <a name="u"></a> The <b>-u</b> flag causes structured JSON progress events
+    to be emitted to <tt>stdout</tt> in real-time during patch generation (such
+    as during OFPS point seeding and iterative optimization). This facilitates
+    subprocess integration with graphical host applications without requiring
+    text regex parsing.<br>
     <br>
     <a name="d"></a> The <b>-d</b> parameter sets the colorspace the test
     values will be generated in. Video gray space is assumed to be an additive

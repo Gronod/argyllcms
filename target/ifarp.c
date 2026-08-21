@@ -72,6 +72,15 @@
 #include "ifarp.h"
 #include "sort.h"		/* Heap sort */
 
+#ifdef STANDALONE_TEST
+int json_progress = 0;
+void emit_json_progress(const char *stage, int percent) {
+	if (!json_progress) return;
+	printf("{\"event\": \"progress\", \"stage\": \"%s\", \"percent\": %d}\n", stage, percent);
+	fflush(stdout);
+}
+#endif
+
 #ifdef DEBUG
 static void dump_image(ifarp *s, int pcp);
 static void dump_image_final(ifarp *s, int pcp);
@@ -385,12 +394,19 @@ void *od				/* context for Perceptual function */
 	if (verb)
 		printf("Full points:\n");
 
+	int last_pct = -1;
 	for (i = 0; s->np < s->inp; i += 17) {
 		i %= s->np;
 		new_node(s, i);
+		int pc = (int)(100.0 * s->np/s->inp + 0.5);
 		if (verb) {
-			int pc = (int)(100.0 * s->np/s->inp + 0.5);
 			printf("  % 3d%%%c",pc,cr_char); fflush(stdout);
+		}
+		if (json_progress && s->inp > 0) {
+			if (pc != last_pct) {
+				last_pct = pc;
+				emit_json_progress("generating", pc);
+			}
 		}
 	}
 
