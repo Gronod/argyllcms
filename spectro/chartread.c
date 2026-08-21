@@ -201,6 +201,76 @@ typedef struct {
 	xspect sp;					/* Spectrum. sp.spec_n > 0 if valid, 100 scaled for ref. */
 } chcol;
 
+extern int json_ui_out;
+int json_ui_out = 0;
+
+static void compute_patch_metrics(chcol *scb, double *eLab, double *mLab) {
+	/* Expected Lab */
+	if (scb->eXYZ[0] != 0.0 || scb->eXYZ[1] != 0.0 || scb->eXYZ[2] != 0.0) {
+		double scaled_exyz[3];
+		scaled_exyz[0] = scb->eXYZ[0] / 100.0;
+		scaled_exyz[1] = scb->eXYZ[1] / 100.0;
+		scaled_exyz[2] = scb->eXYZ[2] / 100.0;
+		icmXYZ2Lab(&icmD50, eLab, scaled_exyz);
+	} else {
+		eLab[0] = eLab[1] = eLab[2] = 0.0;
+	}
+
+	/* Measured Lab */
+	{
+		double scaled_mxyz[3];
+		scaled_mxyz[0] = scb->XYZ[0] / 100.0;
+		scaled_mxyz[1] = scb->XYZ[1] / 100.0;
+		scaled_mxyz[2] = scb->XYZ[2] / 100.0;
+		icmXYZ2Lab(&icmD50, mLab, scaled_mxyz);
+	}
+}
+
+static void emit_row_json_colors(const char *row_id, int row_index, int total_rows, int patch_count, int nchan, chcol **scbs) {
+	int i, j;
+	if (!json_ui_out) return;
+	fprintf(stdout, "ROW_COLORS_JSON: {\"event\": \"row_complete\", \"row_id\": \"%s\", \"row_index\": %d, \"total_rows\": %d, \"patch_count\": %d, \"patches\": [", row_id ? row_id : "", row_index, total_rows, patch_count);
+	
+	for (i = 0; i < patch_count; i++) {
+		chcol *scb = scbs[i];
+		int is_pad = 0;
+		double eLab[3], mLab[3];
+		
+		if (scb->id && strcmp(scb->id, "0") == 0)
+			is_pad = 1;
+			
+		compute_patch_metrics(scb, eLab, mLab);
+		
+		fprintf(stdout, "%s{\"id\": \"%s\", \"loc\": \"%s\", \"is_pad\": %s, \"device\": [", i == 0 ? "" : ", ", scb->id ? scb->id : "", scb->loc ? scb->loc : "", is_pad ? "true" : "false");
+		for (j = 0; j < nchan; j++) {
+			fprintf(stdout, "%s%.4f", j == 0 ? "" : ", ", scb->dev[j] * 100.0);
+		}
+		fprintf(stdout, "]");
+		
+		if (scb->eXYZ[0] != 0.0 || scb->eXYZ[1] != 0.0 || scb->eXYZ[2] != 0.0) {
+			fprintf(stdout, ", \"expected\": {\"XYZ\": [%.4f, %.4f, %.4f], \"Lab\": [%.4f, %.4f, %.4f]}",
+				scb->eXYZ[0], scb->eXYZ[1], scb->eXYZ[2],
+				eLab[0], eLab[1], eLab[2]);
+		}
+		
+		fprintf(stdout, ", \"measured\": {\"XYZ\": [%.4f, %.4f, %.4f], \"Lab\": [%.4f, %.4f, %.4f]",
+			scb->XYZ[0], scb->XYZ[1], scb->XYZ[2],
+			mLab[0], mLab[1], mLab[2]);
+			
+		if (scb->sp.spec_n > 0) {
+			fprintf(stdout, ", \"spectral\": {\"bands\": %d, \"start_nm\": %.1f, \"end_nm\": %.1f, \"norm\": %.1f, \"values\": [",
+				scb->sp.spec_n, scb->sp.spec_wl_short, scb->sp.spec_wl_long, scb->sp.norm);
+			for (j = 0; j < scb->sp.spec_n; j++) {
+				fprintf(stdout, "%s%.4f", j == 0 ? "" : ", ", scb->sp.spec[j]);
+			}
+			fprintf(stdout, "]}");
+		}
+		fprintf(stdout, "}}");
+	}
+	fprintf(stdout, "]}\n");
+	fflush(stdout);
+}
+
 /* Convert a base 62 character into a number */
 /* (This is used for converting the PASSES_IN_STRIPS string */
 /* (Could convert this to using an alphix("0-9A-Za-Z")) */
@@ -1040,6 +1110,16 @@ a1log *log			/* verb, debug & error log */
 			scols[i]->mcond = vals[i].mcond;
 			scols[i]->rr = 1;		/* Has been read */
 		}
+		
+		if (json_ui_out) {
+			int k;
+			for (k = 0; k < totpa; k++) {
+				char row_id[32];
+				sprintf(row_id, "%s", paix->aix(paix, k));
+				emit_row_json_colors(row_id, k, totpa, stipa, scols[0]->n, &scols[k * stipa]);
+			}
+		}
+		
 		free(vals);
 
 
@@ -1338,6 +1418,15 @@ a1log *log			/* verb, debug & error log */
 					scols[sti]->sp = vals[i].sp;
 				}
 				scols[sti]->rr = 1;		/* Has been read */
+			}
+
+			if (json_ui_out) {
+				int k;
+				for (k = 0; k < paist; k++) {
+					char row_id[32];
+					sprintf(row_id, "%s", paix->aix(paix, pai + k));
+					emit_row_json_colors(row_id, pai + k, totpa, stipa, scols[0]->n, &scols[(pai + k) * stipa]);
+				}
 			}
 
 
@@ -1948,6 +2037,13 @@ a1log *log			/* verb, debug & error log */
 				}
 				scb[i]->rr = 1;		/* Has been read */
 			}
+			
+			if (json_ui_out) {
+				char row_id[32];
+				sprintf(row_id, "%s", paix->aix(paix, oroi));
+				emit_row_json_colors(row_id, oroi, totpa, stipa, scb[0]->n, scb);
+			}
+			
 			incflag = 2;		/* Skip to next unread */
 
 
@@ -2419,6 +2515,14 @@ a1log *log			/* verb, debug & error log */
 					scols[pix]->sp = val.sp;
 				}
 				scols[pix]->rr = 1;		/* Has been read */
+				
+				if (json_ui_out) {
+					char row_id[32];
+					int oroi = pix / stipa;
+					sprintf(row_id, "%s", paix->aix(paix, oroi));
+					emit_row_json_colors(row_id, oroi, totpa, 1, scols[pix]->n, &scols[pix]);
+				}
+				
 				printf(" Patch read OK\n");
 
 				/* Advance to next patch. */
@@ -2481,6 +2585,7 @@ usage() {
 			fprintf(stderr,"    ** No ports found **\n");
 	}
 	fprintf(stderr," -t               Use transmission measurement mode\n");
+	fprintf(stderr," -u               Emit real-time JSON updates to stdout\n");
 	fprintf(stderr," -d               Use display measurement mode (white Y relative results)\n");
 	cap2 = inst_show_disptype_options(stderr, " -y              ", icmps, 0, 0);
 	fprintf(stderr," -e               Emissive for transparency on a light box\n");
@@ -2732,6 +2837,10 @@ int main(int argc, char *argv[]) {
 				emis = 0;
 				trans = 0;
 				displ = 2;
+				
+			/* Enable UI JSON output */
+			} else if (argv[fa][1] == 'u') {
+				json_ui_out = 1;
 
 			/* Request emissive measurement */
 			} else if (argv[fa][1] == 'e') {
