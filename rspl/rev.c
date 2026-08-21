@@ -8917,7 +8917,7 @@ static void calc_ocent(rspl *s) {
 
 	/* Hmm. This isn't very reliable in detecting failure. */
 	if (ctx.oog)
-		printf("calc_ocent failed to return in-gamut focal point!\n");
+		warning("calc_ocent failed to return in-gamut focal point!");
 			
 //printf("Final angle = %f\n", ctx.ret);
 

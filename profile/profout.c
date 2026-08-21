@@ -431,12 +431,17 @@ void in_a2b_clut(void *cntx, double out[3], double *in, int itn) {
 	}
 	DBG(("convert PCS to PCS' got %f %f %f\n",out[0],out[1],out[2]))
 
-	if (p->verb && itn == 0) {		/* Output percent intervals */
+	if ((p->verb || json_progress) && itn == 0) {		/* Output percent intervals */
 		int pc;
 		p->count++;
 		pc = (int)(p->count * 100.0/p->total + 0.5);
 		if (pc != p->last) {
-			printf("%c%2d%%",cr_char,pc); fflush(stdout);
+			if (p->verb) {
+				printf("%c%2d%%",cr_char,pc); fflush(stdout);
+			}
+			if (json_progress) {
+				emit_json_progress("a2b_table", pc);
+			}
 			p->last = pc;
 		}
 	}
@@ -658,12 +663,17 @@ void out_b2a_clut(void *cntx, double *out, double in[3], int itn) {
 
 	DBG(("out_b2a_clut returning DEV' %s\n",icmPdv(p->ochan, out)))
 
-	if (p->verb && itn == 0) {		/* Output percent intervals */
+	if ((p->verb || json_progress) && itn == 0) {		/* Output percent intervals */
 		int pc;
 		p->count++;
 		pc = (int)(p->count * 100.0/p->total + 0.5);
 		if (pc != p->last) {
-			printf("%c%2d%%",cr_char,pc); fflush(stdout);
+			if (p->verb) {
+				printf("%c%2d%%",cr_char,pc); fflush(stdout);
+			}
+			if (json_progress) {
+				emit_json_progress("b2a_table", pc);
+			}
 			p->last = pc;
 		}
 	}
@@ -728,12 +738,17 @@ static void PCSp_bdist(void *cntx, double out[1], double in[3], int tn
 	out[0] = (gdist + 20.0)/40.0;
 //printf("~1 bdist returning %f\n",out[0]);
 
-	if (p->verb) {		/* Output percent intervals */
+	if (p->verb || json_progress) {		/* Output percent intervals */
 		int pc;
 		p->count++;
 		pc = (int)(p->count * 100.0/p->total + 0.5);
 		if (pc != p->last) {
-			printf("%c%2d%%",cr_char,pc); fflush(stdout);
+			if (p->verb) {
+				printf("%c%2d%%",cr_char,pc); fflush(stdout);
+			}
+			if (json_progress) {
+				emit_json_progress("gamut_table", pc);
+			}
 			p->last = pc;
 		}
 	}
@@ -2551,6 +2566,7 @@ make_output_icc(
 						if (csgamp == NULL) {
 							if (verb)
 								printf(" Finding Source Colorspace Perceptual Gamut\n");
+							emit_json_progress("gamut_mapping", 10);
 					
 							if ((csgamp = cx.ixp->get_gamut(cx.ixp, gres)) == NULL)
 								error ("%d, %s",src_xicc->e.c, src_xicc->e.m);
@@ -2567,6 +2583,7 @@ make_output_icc(
 	
 							if (verb)
 								printf(" Finding Source Colorspace Saturation Gamut\n");
+							emit_json_progress("gamut_mapping", 25);
 	
 							if ((csgams = ixs->get_gamut(ixs, gres)) == NULL)
 								error ("%d, %s",src_xicc->e.c, src_xicc->e.m);
@@ -2614,6 +2631,7 @@ make_output_icc(
 					/* Creat the destination gamut surface */
 					if (verb)
 						printf(" Finding Destination Gamut\n");
+					emit_json_progress("gamut_mapping", 40);
 			
 					if ((ogam = cx.ox->get_gamut(cx.ox, gres)) == NULL)
 						error ("%d, %s",wr_xicc->e.c, wr_xicc->e.m);
@@ -2657,6 +2675,7 @@ make_output_icc(
 
 					if (verb)
 						printf(" Creating Gamut match\n");
+					emit_json_progress("gamut_mapping", 75);
 
 					/* The real range of Lab 0..100,-128..128,1-28..128 cube */
 					/* when mapped to CAM is ridiculously large (ie. */
@@ -2673,6 +2692,7 @@ make_output_icc(
 					);
 					if (cx.pmap == NULL)
 						error ("Failed to make perceptual gamut map transform");
+					emit_json_progress("gamut_mapping", 100);
 
 
 					if (sepsat) {
@@ -2784,7 +2804,7 @@ make_output_icc(
 				for (i = 0; i < cx.ochan; i++)
 					a2bgres[i] = a2bres;
 
-				if (cx.verb) {
+				if (cx.verb || json_progress) {
 					unsigned int ui;
 					int extra;
 					cx.count = 0;
@@ -2797,9 +2817,13 @@ make_output_icc(
 						;
 					cx.total += extra;
 #endif
-					printf("Creating inverse gamut mapped A to B tables\n");
-
-					printf(" 0%%"); fflush(stdout);
+					if (cx.verb) {
+						printf("Creating inverse gamut mapped A to B tables\n");
+						printf(" 0%%"); fflush(stdout);
+					}
+					if (json_progress) {
+						emit_json_progress("a2b_table", 0);
+					}
 				}
 
 #ifdef DEBUG_IGM_ONE
@@ -2879,7 +2903,7 @@ make_output_icc(
 			/* for perceptual and saturation intents */
 			/* Use helper function to do the hard work. */
 
-			if (cx.verb) {
+			if (cx.verb || json_progress) {
 				unsigned int ui;
 				int extra;
 				cx.count = 0;
@@ -2892,8 +2916,13 @@ make_output_icc(
 					;
 				cx.total += extra;
 #endif
-				printf("Creating B to A tables\n");
-				printf(" 0%%"); fflush(stdout);
+				if (cx.verb) {
+					printf("Creating B to A tables\n");
+					printf(" 0%%"); fflush(stdout);
+				}
+				if (json_progress) {
+					emit_json_progress("b2a_table", 0);
+				}
 			}
 
 #ifdef DEBUG_ONE
@@ -3137,13 +3166,18 @@ make_output_icc(
 			for (i = 0; i < cx.ichan; i++)
 				  clutres[i] = b2ares;
 
-			if (cx.verb) {
+			if (cx.verb || json_progress) {
 				unsigned int ui;
 				cx.count = 0;
 				cx.last = -1;
 				for (cx.total = 1, ui = 0; ui < cx.ichan; cx.total *= clutres[ui++])
 					; 
-				printf(" 0%%"); fflush(stdout);
+				if (cx.verb) {
+					printf(" 0%%"); fflush(stdout);
+				}
+				if (json_progress) {
+					emit_json_progress("gamut_table", 0);
+				}
 			}
 
 

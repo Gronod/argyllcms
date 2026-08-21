@@ -229,14 +229,19 @@ void in_b2a_clut(void *cntx, double *out, double in[3]
 	DBG(("convert PCS' to DEV' got    %f %f %f %f\n",out[0],out[1],out[2],out[3]))
 	DBG(("in_b2a_clut returning DEV' %f %f %f\n",out[0],out[1],out[2]))
 
-	if (p->verb
+	if ((p->verb || json_progress)
 	&& tn == 0
 	) {		/* Output percent intervals */
 		int pc;
 		p->count++;
 		pc = (int)(p->count * 100.0/p->total + 0.5);
 		if (pc != p->last) {
-			printf("%c%2d%%",cr_char,pc); fflush(stdout);
+			if (p->verb) {
+				printf("%c%2d%%",cr_char,pc); fflush(stdout);
+			}
+			if (json_progress) {
+				emit_json_progress("b2a_table", pc);
+			}
 			p->last = pc;
 		}
 	}
@@ -1171,7 +1176,7 @@ make_input_icc(
 
 			/* We now setup an exact inverse, colorimetric style */
 			/* Use helper function to do the hard work. */
-			if (cx.verb) {
+			if (cx.verb || json_progress) {
 				unsigned int ui;
 				int extra;
 				cx.count = 0;
@@ -1182,8 +1187,13 @@ make_input_icc(
 				for (extra = 1, ui = 0; ui < 3; extra *= (blut_clutPoints[ui++]-1))
 					;
 				cx.total += extra;
-				printf("Creating B to A tables\n");
-				printf(" 0%%"); fflush(stdout);
+				if (cx.verb) {
+					printf("Creating B to A tables\n");
+					printf(" 0%%"); fflush(stdout);
+				}
+				if (json_progress) {
+					emit_json_progress("b2a_table", 0);
+				}
 			}
 
 			if (wr_icco->create_lut_xforms(
