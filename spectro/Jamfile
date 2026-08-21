@@ -200,6 +200,7 @@ Main spotread : spotread.c : : : : : ;
 
 # Connected instrument enumeration utility
 Main instlist : instlist.c : : : : : ;
+Clean clean : instlist$(SUFEXE) instlist.o ;
 
 echo "HOME = " $(HOME) ;
 echo "PWD = " $(PWD) ;
