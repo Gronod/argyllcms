@@ -32,15 +32,29 @@ and of Argyll was in October 2000. Code development commenced in 1995. See
 Changes Summary for an overview of changes since the last release. Changes
 between revisions is detailed in the log.txt file that accompanies the source code. 
 
-It is licensed under the Affero GNU Version 3 license.
+Modifications in this fork:
+--------------------------
+- Added `-u` command-line switch to `chartread` to emit real-time row-level
+  and patch-level colour measurement events in JSON format (`ROW_COLORS_JSON: ...`)
+  to `stdout` for external UI / subprocess integration.
+
+Original Author: Graeme W. Gill
+Modified source code repository: https://git.i3omb.com/gronod/argyllcms
+
+License:
+--------
+ArgyllCMS is licensed under the GNU Affero General Public License (AGPL) Version 3.
+In compliance with the AGPLv3, the complete corresponding source code for all
+modifications is publicly available at https://git.i3omb.com/gronod/argyllcms.
 
 For more detailed information, please consult the HTML documentation in
 <doc/ArgyllDoc.html>, or <http://www.argyllcms.com/doc/ArgyllDoc.html>.
 
-For the most recent source code start at <http://www.argyllcms.com/index.html>.
+For the upstream source code start at <http://www.argyllcms.com/index.html>.
 
-Contact me in regards to Argyll, icclib or cgatslib at:
+Contact Graeme in regards to original Argyll, icclib or cgatslib at:
 
 	Graeme at argyllcms dot com
 
 Enjoy!
+
