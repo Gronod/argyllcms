@@ -137,6 +137,15 @@
 #include "rspl.h"
 #include "ofps.h"
 
+#ifdef STANDALONE_TEST
+int json_progress = 0;
+void emit_json_progress(const char *stage, int percent) {
+	if (!json_progress) return;
+	printf("{\"event\": \"progress\", \"stage\": \"%s\", \"percent\": %d}\n", stage, percent);
+	fflush(stdout);
+}
+#endif
+
 //#include <iperf.h>
 
 #undef DEBUG
@@ -5713,6 +5722,7 @@ ofps_seed(ofps *s) {
 	int dofixed = 0;	/* Do a fixed point next */
 	int abortonfail = 0;	/* Abort on failing to add fixed points (isn't always good ?) */
 	int nsp = 0;		/* Number of surface points */
+	int last_pct = -1;
 	aat_atrav_t *aat_tr;
 
 	if (s->verb)
@@ -6070,6 +6080,13 @@ ofps_seed(ofps *s) {
 		if (s->verb && (j == 11 || i == (s->tinp-1))) {
 			printf("%cAdded %d/%d",cr_char,s->np,s->tinp); fflush(stdout);
 			j = 0;
+		}
+		if (json_progress && s->tinp > 0) {
+			int pct = (int)(100.0 * (i + 1) / s->tinp);
+			if (pct != last_pct) {
+				last_pct = pct;
+				emit_json_progress("seeding", pct);
+			}
 		}
 #ifdef DUMP_STRUCTURE
 		printf("Done node %d\n",i);
@@ -7982,6 +7999,9 @@ ofps *s
 			s->l_nvtxdeleted = s->nvtxdeleted;
 #endif
 			s->l_mstime = msec_time();
+		}
+		if (json_progress && maxits > 0) {
+			emit_json_progress("optimising", (int)(100.0 * (s->optit + 1) / maxits));
 		}
 
 #ifdef DUMP_STRUCTURE
