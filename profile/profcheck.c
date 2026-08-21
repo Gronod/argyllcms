@@ -55,6 +55,7 @@ usage(void) {
 	fprintf(stderr,"Author: Graeme W. Gill, licensed under the AGPL Version 3\n");
 	fprintf(stderr,"usage: profcheck [-options] data.ti3 iccprofile.icm\n");
 	fprintf(stderr," -v [level]      Verbosity level (default 1), 2 to print each DE\n");
+	fprintf(stderr," -u              Emit structured JSON Delta E report to stdout\n");
 	fprintf(stderr," -c              Show CIE94 delta E values\n");
 	fprintf(stderr," -k              Show CIEDE2000 delta E values\n");
 	fprintf(stderr," -w              create %s visualisation (iccprofile%s)\n",vrml_format(),vrml_ext());
@@ -105,6 +106,7 @@ typedef struct {
 int main(int argc, char *argv[]) {
 	int fa,nfa;				/* current argument we're looking at */
 	int verb = 0;
+	int json_report = 0;
 	int cie94 = 0;
 	int cie2k = 0;
 	int dovrml = 0;
@@ -185,6 +187,11 @@ int main(int argc, char *argv[]) {
 				if (na != NULL && isdigit(na[0])) {
 					verb = atoi(na);
 				}
+			}
+
+			/* JSON Delta E report */
+			else if (argv[fa][1] == 'u') {
+				json_report = 1;
 			}
 
 			/* VRML/X3D */
@@ -1246,8 +1253,23 @@ int main(int argc, char *argv[]) {
 			wrl->make_lines_vc(wrl, 0, 0.0);
 			wrl->del(wrl);
 		}
-		printf("Profile check complete, errors%s: max. = %f, avg. = %f, RMS = %f\n",
-            cie2k ? "(CIEDE2000)" : cie94 ? " (CIE94)" : "", merr, aerr/nsamps, sqrt(rerr/nsamps));
+		if (json_report) {
+			if (cie2k) {
+				printf("{\"event\": \"report\", \"peak_de2000\": %.2f, \"avg_de2000\": %.2f, \"rms\": %.2f}\n",
+				       merr, aerr/nsamps, sqrt(rerr/nsamps));
+			} else if (cie94) {
+				printf("{\"event\": \"report\", \"peak_de94\": %.2f, \"avg_de94\": %.2f, \"rms\": %.2f}\n",
+				       merr, aerr/nsamps, sqrt(rerr/nsamps));
+			} else {
+				printf("{\"event\": \"report\", \"peak_de\": %.2f, \"avg_de\": %.2f, \"rms\": %.2f}\n",
+				       merr, aerr/nsamps, sqrt(rerr/nsamps));
+			}
+			fflush(stdout);
+		}
+		if (verb || !json_report) {
+			printf("Profile check complete, errors%s: max. = %f, avg. = %f, RMS = %f\n",
+	            cie2k ? "(CIEDE2000)" : cie94 ? " (CIE94)" : "", merr, aerr/nsamps, sqrt(rerr/nsamps));
+		}
 
 		/* ------------------------------- */
 		/* If we want sort by target value */

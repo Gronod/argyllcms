@@ -22,6 +22,8 @@
         1), 2 to print each DE</span></small><small><span
         style="font-family: monospace;"></span><br style="font-family:
         monospace;">
+      <span style="font-family: monospace;">&nbsp;-u&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Emit
+        structured JSON Delta E report to stdout</span><br style="font-family: monospace;">
       <span style="font-family: monospace;">&nbsp;-c&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp;
 Show
@@ -232,6 +234,12 @@ Sort
 
 
       be</b><i> .ti3 PCS values</i><br>
+    <br>
+    The <b>-u</b> flag causes the final delta E check report to be
+    emitted to <tt>stdout</tt> in structured JSON format (e.g.,
+    <tt>{"event": "report", "peak_de2000": 2.34, "avg_de2000": 0.51, "rms": 0.61}</tt>).
+    This facilitates subprocess integration and mathematical extraction of error
+    metrics without parsing human-readable text.<br>
     <br>
     The <b>-c</b> option causes the differences between the test values
     and the profile prediction of the color for each device value to be
