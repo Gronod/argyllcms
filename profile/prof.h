@@ -32,6 +32,9 @@ typedef enum {
 	prof_matonly          = 7		/* XYZ matrix, linear */
 } prof_atype;
 
+extern int json_progress;
+void emit_json_progress(const char *stage, int percent);
+
 /* Output or Display device */
 void make_output_icc(
 	prof_atype ptype,		/* Profile output type */

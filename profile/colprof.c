@@ -75,6 +75,14 @@
 
 #define DEMPH_DEFAULT 1.0	/* Default dark region emphasis == none */
 
+int json_progress = 0;
+
+void emit_json_progress(const char *stage, int percent) {
+	if (!json_progress) return;
+	printf("{\"event\": \"progress\", \"stage\": \"%s\", \"percent\": %d}\n", stage, percent);
+	fflush(stdout);
+}
+
 /*
 
   Flags used:
@@ -129,6 +137,7 @@ void usage(char *diag, ...) {
 	fprintf(stderr,"                 X = display XYZ cLUT + matrix, Y = display XYZ cLUT + debug matrix\n");
 	fprintf(stderr,"                 g = gamma+matrix, s = shaper+matrix, m = matrix only,\n");
 	fprintf(stderr,"                 G = single gamma+matrix, S = single shaper+matrix\n");
+	fprintf(stderr," -u              Emit structured JSON calculation progress to stdout\n");
 	fprintf(stderr," -u              If input profile, auto scale WP to allow extrapolation\n");
 	fprintf(stderr," -ua             If input profile, force absolute intent\n");
 	fprintf(stderr," -uc             If input profile, clip cLUT values above WP\n");
@@ -492,8 +501,6 @@ int main(int argc, char *argv[]) {
 			}
 
 			else if (argv[fa][1] == 'u') {
-				autowpsc = 1;
-				clipovwp = 0;
 				if (argv[fa][2] == 'a') {
 					autowpsc = 2;
 					clipovwp = 0;
@@ -502,12 +509,15 @@ int main(int argc, char *argv[]) {
 					clipovwp = 1;
 				} else if (argv[fa][2] != '\000') {
 					usage("Unknown flag '%c' after -u",argv[fa][2]);
-
-				} else if (na != NULL) {
+				} else if (na != NULL && (isdigit(na[0]) || (na[0] == '.' && isdigit(na[1])))) {
 					fa = nfa;
 					iwpscale = atof(na);
 					if (iwpscale < 0.0 || iwpscale > 200.0)
 						usage("Argument '%s' to flag -u out of range",na);
+					autowpsc = 1;
+					clipovwp = 0;
+				} else {
+					json_progress = 1;
 				}
 			}
 			/* Clip primaries */
