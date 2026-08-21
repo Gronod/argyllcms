@@ -25,6 +25,7 @@
 
 
       Verbose mode<br>
+      &nbsp;<a href="#u">-u</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Emit JSON manifest of generated target pages on stdout<br>
       &nbsp;<a href="#i">-i 20 | 22 | 41 | 51 | SS | i1 | p3 | CM</a> Select
       target instrument (default i1)<br>
       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -446,6 +447,10 @@ A3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     information about how many patches there are in a row, how many patches in a
     set,&nbsp; and how many pages will be generated. Good for figuring out what
     the magic number of patches should be for a particular page size.<br>
+    <br>
+    <a name="u"></a> The <b>-u</b> flag emits a structured JSON manifest upon
+    completion to <code>stdout</code> detailing the generated files, physical dimensions,
+    and patch counts per page.<br>
     <br>
     <a name="i"></a> The <b>-i</b> parameter should be used to tell printtarg
     which instrument it should lay the patches out for. Each instrument has a
