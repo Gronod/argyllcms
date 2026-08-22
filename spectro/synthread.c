@@ -121,6 +121,8 @@ static void domodel(synthmodel *p, double *out, double *in) {
 	}
 }
 
+#include "ui.h"
+
 int main(int argc, char *argv[]) {
 	int i, j, rv = 0;
 	int fa,nfa;							/* current argument we're looking at */

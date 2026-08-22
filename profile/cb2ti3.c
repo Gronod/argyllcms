@@ -47,6 +47,8 @@ usage(void) {
 	exit(1);
 	}
 
+#include "ui.h"
+
 int main(int argc, char *argv[])
 {
 	int i;

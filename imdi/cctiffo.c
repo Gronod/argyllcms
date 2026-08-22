@@ -430,6 +430,8 @@ static void output_curves(
 
 
 int
+#include "ui.h"
+
 main(int argc, char *argv[]) {
 	int fa,nfa;				/* argument we're looking at */
 	static char in_name[MAXNAMEL+1];		/* Raster file name */

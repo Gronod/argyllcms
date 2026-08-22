@@ -173,6 +173,8 @@ void calc_bc(edatas *ed) {
 
 void usage(void);
 
+#include "ui.h"
+
 int main(int argc, char *argv[])
 {
 	int i,j,k;

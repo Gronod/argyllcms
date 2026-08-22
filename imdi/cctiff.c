@@ -976,6 +976,8 @@ J_COLOR_SPACE cspace
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 int
+#include "ui.h"
+
 main(int argc, char *argv[]) {
 	int fa, nfa;							/* argument we're looking at */
 	static char in_name[MAXNAMEL+1] = "";			/* Input raster file name */

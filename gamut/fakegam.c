@@ -56,6 +56,8 @@ void usage(char *diag) {
 
 
 int
+#include "ui.h"
+
 main(int argc, char *argv[]) {
 	int fa,nfa;				/* argument we're looking at */
 	static char *xl, out_name[MAXNAMEL+1];

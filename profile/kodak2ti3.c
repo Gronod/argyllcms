@@ -58,6 +58,8 @@ FILE *open_pat(char *filename);
 int next_pat(FILE *fp, double *Lab);
 void close_pat(FILE *fp);
 
+#include "ui.h"
+
 int main(int argc, char *argv[])
 {
 	int i;

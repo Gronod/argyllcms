@@ -78,6 +78,8 @@ struct _inpinfo {
 	cgats *c;
 }; typedef struct _inpinfo inpinfo;
 
+#include "ui.h"
+
 int main(int argc, char *argv[]) {
 	int fa,nfa;					/* current argument we're looking at */
 	int verb = 0;
