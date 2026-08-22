@@ -43,9 +43,8 @@ jobs:
           cp jam.exe /usr/bin/jam.exe
           
       - name: Build ArgyllCMS
-        env:
-          COMPILER: MINGW64
         run: |
+          export MINGW=$(cygpath -m /mingw64)
           jam -q -fJambase -j1 -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Smoke Tests
