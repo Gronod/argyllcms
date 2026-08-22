@@ -47,6 +47,7 @@ jobs:
         env:
           COMPILER: MINGW64
         run: |
+          export CC="gcc -Wno-implicit-function-declaration -Wno-implicit-int -Wno-incompatible-pointer-types -Wno-int-conversion"
           jam -q -fJambase -j$(nproc) -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Smoke Tests

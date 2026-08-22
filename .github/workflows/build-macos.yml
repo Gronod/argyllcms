@@ -43,6 +43,7 @@ jobs:
           export OSTYPE=darwin
           export MACHTYPE=${{ matrix.machtype }}
           export HOSTTYPE=${{ matrix.arch }}
+          export CC="cc -Wno-implicit-function-declaration -Wno-implicit-int -Wno-incompatible-pointer-types -Wno-int-conversion"
           jam -q -fJambase -j$(sysctl -n hw.ncpu) -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Smoke Tests
