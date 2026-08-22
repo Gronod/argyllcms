@@ -3531,7 +3531,7 @@ double *in		/* input point (absolute)*/
 ) {
 	gtri *tp;
 	int j;
-	double ss, rv;
+	double ss, rv = -1.0;
 	double nin[3];	/* Normalised input vector */
 
 //printf("~1 radial called with %f %f %f\n", in[0], in[1], in[2]);
@@ -3542,7 +3542,7 @@ double *in		/* input point (absolute)*/
 	for (ss = 0.0, j = 0; j < 3; j++)
 		ss += (in[j] - s->cent[j]) * (in[j] - s->cent[j]);
 	ss = 1.0/sqrt(ss);				/* Normalising factor */
-	for (ss = 0.0, j = 0; j < 3; j++)
+	for (j = 0; j < 3; j++)
 		nin[j] = s->cent[j] + (in[j] - s->cent[j]) * ss;
 
 	tp = s->tris; 
