@@ -186,9 +186,9 @@ void output_curve(
 		out_vals[e] = in_vals[e];
 }
 
-int
 #include "ui.h"
 
+int
 main(int argc, char *argv[]) {
 	int fa,nfa;				/* argument we're looking at */
 	static char prof_name[MAXNAMEL+1];

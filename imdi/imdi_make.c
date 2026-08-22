@@ -136,9 +136,9 @@ void usage(void) {
 	exit(1);
 }
 
-int
 #include "ui.h"
 
+int
 main(int argc, char *argv[]) {
 	int fa,nfa;				/* argument we're looking at */
 	int indiv = 0;			/* Individual files */

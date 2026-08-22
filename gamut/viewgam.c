@@ -169,9 +169,9 @@ static void set_default(gamdisp *gds, int n) {
 
 static int g_vect_isect(gamut *s, double *p, double *p1, double *p2);
 
-int
 #include "ui.h"
 
+int
 main(int argc, char *argv[]) {
 	int fa, nfa, mfa;		/* argument we're looking at */
 	int n, ng = 0;			/* Current allocation, number of input gamuts */

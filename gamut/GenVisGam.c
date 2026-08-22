@@ -86,9 +86,9 @@ double sl[65][4] = {
 
 #define GAMRES 5.0		/* Default surface resolution */
 
-int
 #include "ui.h"
 
+int
 main(int argc, char *argv[]) {
 	int i, j, e;
 	double Yxy[3], XYZ[3], Lab[3];
