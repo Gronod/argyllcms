@@ -33,12 +33,13 @@ jobs:
             make
             mingw-w64-x86_64-gcc
             zip
+            bison
             
       - name: Install ftjam
         run: |
-          wget https://github.com/kimgr/ftjam/archive/refs/tags/v2.5.3rc2.tar.gz
-          tar -xzf v2.5.3rc2.tar.gz
-          cd ftjam-2.5.3rc2
+          wget -q -O ftjam.tar.gz https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2.tar.gz/download
+          tar -xzf ftjam.tar.gz
+          cd ftjam-2.5.2
           make
           cp bin.*/jam.exe /usr/bin/jam.exe
           

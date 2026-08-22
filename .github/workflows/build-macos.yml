@@ -32,7 +32,7 @@ jobs:
         
       - name: Install Dependencies
         run: |
-          brew install ftjam
+          brew install jam
           
       - name: Build ArgyllCMS
         run: |
