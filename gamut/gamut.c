@@ -3541,9 +3541,15 @@ double *in		/* input point (absolute)*/
 	/* Compute vector length to center point */
 	for (ss = 0.0, j = 0; j < 3; j++)
 		ss += (in[j] - s->cent[j]) * (in[j] - s->cent[j]);
-	ss = 1.0/sqrt(ss);				/* Normalising factor */
-	for (j = 0; j < 3; j++)
-		nin[j] = s->cent[j] + (in[j] - s->cent[j]) * ss;
+	ss = sqrt(ss);
+	if (ss > 1e-9) {				/* Normalise to 1.0 */
+		for (j = 0; j < 3; j++)
+			nin[j] = s->cent[j] + (in[j] - s->cent[j]) / ss;
+	} else {
+		nin[0] = s->cent[0] + 1.0;
+		nin[1] = s->cent[1];
+		nin[2] = s->cent[2];
+	}
 
 	tp = s->tris; 
 	FOR_ALL_ITEMS(gtri, tp) {
@@ -3605,9 +3611,9 @@ double *in		/* input point (absolute)*/
 		   on parallel planes). Fall back to robust brute force search. */
 		double dummy_out[3];
 		rv = radial_bf(s, out ? out : dummy_out, in);
-		if (rv < 0.0)
+		if (rv < 0.0 || rv != rv)
 			rv = 0.0;
-	} else if (rv < 0.0) {
+	} else if (rv < 0.0 || rv != rv) {
 		rv = 0.0;
 	}
 
