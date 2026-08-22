@@ -61,8 +61,8 @@ char *dpath		/* path to device */
 
 	a1logd(log, 6, "usb_check_and_add: given '%s'\n",dpath);
 
-	/* Open the device so that we can read it */
-	if ((fd = open(dpath, O_RDONLY)) < 0) {
+	/* Open the device so that we can read it without blocking */
+	if ((fd = open(dpath, O_RDONLY | O_NONBLOCK)) < 0) {
 		a1logd(log, 1, "usb_check_and_add: failed to open '%s'\n",dpath);
 		return ICOM_OK;
 	}
@@ -282,6 +282,9 @@ icompaths *p
 				} else {	/* Flat */
 					char path2[PATH_MAX];
 					struct stat statbuf;
+
+					if (strncmp(e1->d_name, "usb", 3) != 0)
+						continue;
 
 					/* Hmm. This will go badly wrong if this is a /dev/usbdev%d.%d_ep%d, */
 					/* since we're not expecting the end points to be separate devices. */

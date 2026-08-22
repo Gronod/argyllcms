@@ -646,7 +646,7 @@ static int icompaths_fs_excluded(icompaths *p, icompath *path) {
 		int i;
 
 		for (i = 0; i < p->exno; i++) {
-			if (strcmp(p->exlist[i], path->spath) == 0) {
+			if (strcmp(p->exlist[i], "1") == 0 || strcasecmp(p->exlist[i], "all") == 0 || strcmp(p->exlist[i], path->spath) == 0) {
 				a1logd(p->log, 5, "excluding '%s' from fast scan\n",path->spath);
 				return 1;
 			}
