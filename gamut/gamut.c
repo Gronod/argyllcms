@@ -3600,8 +3600,12 @@ double *in		/* input point (absolute)*/
 //if (trace) printf("~1 Normalised in = %f %f %f\n", nin[0], nin[1], nin[2]);
 	rv = radial_point(s, s->lutree, nin);
 
-	if (rv < -1e-4) {
-		error("gamut: radial internal error - failed to find triangle (rv %f)\n",rv);
+	if (rv < -1e-4 || rv > 1e6 || rv != rv) {
+		/* Failed to find a valid triangle via BSP (likely floating point fuzz 
+		   on parallel planes). Fall back to robust brute force search. */
+		rv = radial_bf(s, NULL, in);
+		if (rv < 0.0)
+			rv = 0.0;
 	} else if (rv < 0.0) {
 		rv = 0.0;
 	}
