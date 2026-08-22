@@ -3600,8 +3600,10 @@ double *in		/* input point (absolute)*/
 //if (trace) printf("~1 Normalised in = %f %f %f\n", nin[0], nin[1], nin[2]);
 	rv = radial_point(s, s->lutree, nin);
 
-	if (rv < 0.0) {
+	if (rv < -1e-4) {
 		error("gamut: radial internal error - failed to find triangle (rv %f)\n",rv);
+	} else if (rv < 0.0) {
+		rv = 0.0;
 	}
 
 	if (out != NULL) {
