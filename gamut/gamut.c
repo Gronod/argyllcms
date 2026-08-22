@@ -4034,10 +4034,7 @@ double *nin		/* Normalised center relative point */
 	num = -(t->pe[0] * s->cent[0] + t->pe[1] * s->cent[1] + t->pe[2] * s->cent[2] + t->pe[3]);
 	denom = (t->pe[0] * nin[0] + t->pe[1] * nin[1] + t->pe[2] * nin[2]);
 
-	if (fabs(denom) < 1e-9) {
-		/* Hmm. The ray is paralell to the triangle ? */
-		error("radial_point: failed to intersect radial triangle, num %e, denom %e\n",num,denom);
-	}
+
 	rv = num/denom;
 
 #ifdef ASSERTS
