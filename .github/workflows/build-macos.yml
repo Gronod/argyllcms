@@ -43,6 +43,7 @@ jobs:
           export OSTYPE=darwin
           export MACHTYPE=${{ matrix.machtype }}
           export HOSTTYPE=${{ matrix.arch }}
+          export CCOPTFLAG="-O0"
           jam -q -fJambase -j1 -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Smoke Tests
