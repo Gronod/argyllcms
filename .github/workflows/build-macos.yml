@@ -30,9 +30,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Install Dependencies
+      - name: Install ftjam
         run: |
-          brew install jam
+          wget -q -O ftjam.tar.gz https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2.tar.gz/download
+          tar -xzf ftjam.tar.gz
+          cd ftjam-2.5.2
+          make
+          sudo cp bin.*/jam /usr/local/bin/jam
           
       - name: Build ArgyllCMS
         run: |
