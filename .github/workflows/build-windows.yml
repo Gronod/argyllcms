@@ -37,19 +37,15 @@ jobs:
             
       - name: Install ftjam
         run: |
-          wget -q -O ftjam.tar.gz https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2.tar.gz/download
-          tar -xzf ftjam.tar.gz
-          cd ftjam-2.5.2
-          export JAM_TOOLSET=MINGW
-          PATH=".:$PATH" make CC="gcc -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-implicit-int" -f builds/win32-gcc.mk
-          cp bin.ntx86/jam.exe /usr/bin/jam.exe
+          wget -q -O ftjam-win32.zip https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2-win32.zip/download
+          unzip ftjam-win32.zip
+          cp jam.exe /usr/bin/jam.exe
           
       - name: Build ArgyllCMS
         env:
           COMPILER: MINGW64
         run: |
-          export CFLAGS="-Wno-implicit-function-declaration -Wno-implicit-int -Wno-incompatible-pointer-types -Wno-int-conversion"
-          jam -q -fJambase -j$(nproc) -sCCFLAGS="-DNT -mwin32 -pipe $CFLAGS" -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
+          jam -q -fJambase -j1 -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Smoke Tests
         env:
