@@ -40,7 +40,7 @@ jobs:
           wget -q -O ftjam.tar.gz https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2.tar.gz/download
           tar -xzf ftjam.tar.gz
           cd ftjam-2.5.2
-          make -f builds/win32-gcc.mk
+          make CC="gcc -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-implicit-int" -f builds/win32-gcc.mk
           cp bin.ntx86/jam.exe /usr/bin/jam.exe
           
       - name: Build ArgyllCMS
