@@ -3603,7 +3603,8 @@ double *in		/* input point (absolute)*/
 	if (rv < -1e-4 || rv > 1e6 || rv != rv) {
 		/* Failed to find a valid triangle via BSP (likely floating point fuzz 
 		   on parallel planes). Fall back to robust brute force search. */
-		rv = radial_bf(s, NULL, in);
+		double dummy_out[3];
+		rv = radial_bf(s, out ? out : dummy_out, in);
 		if (rv < 0.0)
 			rv = 0.0;
 	} else if (rv < 0.0) {
