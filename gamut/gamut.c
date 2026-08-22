@@ -3956,6 +3956,8 @@ double *nin		/* Normalised center relative point */
 ) {
 	gtri *rv;
 //if (trace) printf("~1 rad_pnt_tri: BSP 0x%x tag = %d, point %f %f %f\n", np,np->tag,nin[0],nin[1],nin[2]);
+	if (np == NULL)
+		return NULL;
 	if (np->tag == 1) {		/* It's a BSP node */
 		gbspn *n = (gbspn *)np;
 		double ds;
@@ -4037,7 +4039,7 @@ double *nin		/* Normalised center relative point */
 	/* If we failed to find a triangle, or the result was incorrect, do a */
 	/* brute force search to be sure of the result. */
 	if (t == NULL) {
-		error("rspl.radial: failed to find radial triangle\n");
+		return -1.0;	/* Signal failure to caller for fallback */
 	}
 
 	/* Compute the intersection of the input vector with the triangle plane */
@@ -5074,6 +5076,8 @@ int   *lu		/* Number used in list */
 	}
 #endif
 
+	if (np == NULL)
+		return;
 	if (np->tag == 1) {		/* It's a BSP node */
 		int j;
 		gbspn *n = (gbspn *)np;
