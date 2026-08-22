@@ -61,6 +61,7 @@ jobs:
         env:
           COMPILER: MINGW64
         run: |
+          export MINGW=$(cygpath -m /mingw64)
           ./makepackagebin.sh
           
       - name: Upload Artifact
