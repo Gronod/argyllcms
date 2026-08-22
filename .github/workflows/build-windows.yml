@@ -1,0 +1,71 @@
+name: Windows x86_64 Release Build
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    defaults:
+      run:
+        shell: msys2 {0}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git
+            make
+            mingw-w64-x86_64-gcc
+            zip
+            
+      - name: Install ftjam
+        run: |
+          wget https://github.com/kimgr/ftjam/archive/refs/tags/v2.5.3rc2.tar.gz
+          tar -xzf v2.5.3rc2.tar.gz
+          cd ftjam-2.5.3rc2
+          make
+          cp bin.*/jam.exe /usr/bin/jam.exe
+          
+      - name: Build ArgyllCMS
+        env:
+          COMPILER: MINGW64
+        run: |
+          jam -q -fJambase -j$(nproc) -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
+          
+      - name: Smoke Tests
+        env:
+          ARGYLL_NOT_INTERACTIVE: "1"
+          ARGYLL_EXCLUDE_SERIAL_SCAN: "1"
+        run: |
+          ./bin/dispcal.exe -? || true
+          ./bin/chartread.exe -? || true
+          ./bin/colprof.exe -? || true
+          ./bin/targen.exe -? || true
+          
+      - name: Package Release
+        env:
+          COMPILER: MINGW64
+        run: |
+          ./makepackagebin.sh
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: argyllcms-windows-x86_64-bin
+          path: Argyll_V*_win64_exe.zip

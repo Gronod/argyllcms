@@ -1,0 +1,65 @@
+name: macOS Release Build
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-13
+            arch: x86_64
+            machtype: x86_64-apple-darwin
+            artifact: osx10.6_x86_64_bin
+          - os: macos-latest
+            arch: arm64
+            machtype: arm64-apple-darwin
+            artifact: macOS_arm64_bin
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install Dependencies
+        run: |
+          brew install ftjam
+          
+      - name: Build ArgyllCMS
+        run: |
+          export OSTYPE=darwin
+          export MACHTYPE=${{ matrix.machtype }}
+          export HOSTTYPE=${{ matrix.arch }}
+          jam -q -fJambase -j$(sysctl -n hw.ncpu) -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
+          
+      - name: Smoke Tests
+        env:
+          ARGYLL_NOT_INTERACTIVE: "1"
+          ARGYLL_EXCLUDE_SERIAL_SCAN: "1"
+        run: |
+          ./bin/dispcal -? || true
+          ./bin/chartread -? || true
+          ./bin/colprof -? || true
+          ./bin/targen -? || true
+          
+      - name: Package Release
+        run: |
+          export OSTYPE=darwin
+          export MACHTYPE=${{ matrix.machtype }}
+          export HOSTTYPE=${{ matrix.arch }}
+          ./makepackagebin.sh
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: argyllcms-${{ matrix.os }}-bin
+          path: Argyll_V*_${{ matrix.artifact }}.tgz
