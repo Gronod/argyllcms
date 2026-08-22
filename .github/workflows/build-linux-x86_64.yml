@@ -36,6 +36,9 @@ jobs:
           jam -q -fJambase -j$(nproc) -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Smoke Tests
+        env:
+          ARGYLL_NOT_INTERACTIVE: "1"
+          ARGYLL_EXCLUDE_SERIAL_SCAN: "1"
         run: |
           ./bin/dispcal -? || true
           ./bin/chartread -? || true
