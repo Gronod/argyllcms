@@ -3980,12 +3980,14 @@ double *nin		/* Normalised center relative point */
 		return NULL;		/* Hmm */
 
 	} else {			/* It's a triangle or list of triangles */
-		int nt;			/* Number of triangles in list */
-		gtri **tpp;		/* Pointer to list of triangles */
+		int nt = 0;			/* Number of triangles in list */
+		gtri **tpp = NULL;		/* Pointer to list of triangles */
+		gtri *t_single;
 		int i, j;
 
 		if (np->tag == 2) {			/* It's a triangle */
-			tpp = (gtri **)&np;
+			t_single = (gtri *)np;
+			tpp = &t_single;
 			nt = 1;
 		} else if (np->tag == 3) {	/* It's a triangle list */
 			gbspl *n = (gbspl *)np;
@@ -5222,13 +5224,15 @@ int   *lu		/* Number used in list */
 		return;
 
 	/* It's a list of triangles */
-	} else {
-		int nt;			/* Number of triangles in list */
-		gtri **tpp;		/* Pointer to list of triangles */
+	} else {			/* It's a triangle or list of triangles */
+		int nt = 0;			/* Number of triangles in list */
+		gtri **tpp = NULL;		/* Pointer to list of triangles */
+		gtri *t_single;
 		int i, j;
 
 		if (np->tag == 2) {			/* It's a triangle */
-			tpp = (gtri **)&np;
+			t_single = (gtri *)np;
+			tpp = &t_single;
 			nt = 1;
 		} else if (np->tag == 3) {	/* It's a triangle list */
 			gbspl *n = (gbspl *)np;
