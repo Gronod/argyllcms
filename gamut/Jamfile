@@ -46,6 +46,11 @@ Main GenRMGam : GenRMGam.c ;
 
 # Generate reference medium gamut
 # (NoUpdate so that Cross Compile Win64 hack works)
+actions GenFile1 bind _a
+{
+	lldb -b -o "run $(_a) $(<)" -o "bt all" -o "quit" -- $(TARGETINFO_LOC)$(PATH)$(_s[1])
+}
+
 NNoUpdate RefMediumGamut.gam ;
 GenFile RefMediumGamut.gam : GenRMGam ;
 
