@@ -60,7 +60,7 @@ jobs:
         if: matrix.arch == 'arm64'
         run: |
           echo "Compiling GenRMGam with debug symbols..."
-          cc -g -O0 -o gamut/GenRMGam_debug gamut/GenRMGam.c gamut/gamut.c gamut/libgamut.a rspl/librspl.a numlib/libnum.a numlib/libui.a xicc/libxicc.a cgats/libcgats.a icc/libicc.a plot/libplot.a plot/libvrml.a yajl/libyajl.a ccast/libccast.a ccast/axTLS/libaxtls.a tiff/libtiff.a jpeg/libjpeg.a png/libpng.a zlib/libz.a spectro/libconv.a -I. -Igamut -Irspl -Inumlib -Ixicc -Icgats -Iicc -Iplot -Iyajl -Iccast -Itiff -Ijpeg -Ipng -Izlib -framework Carbon -framework Cocoa -framework IOKit -framework CoreFoundation -framework AppKit -framework AudioToolbox -lm -lpthread || true
+          cc -g -O0 -o gamut/GenRMGam_debug gamut/GenRMGam.c gamut/gamut.c gamut/libgamut.a rspl/librspl.a numlib/libnum.a numlib/libui.a xicc/libxicc.a cgats/libcgats.a icc/libicc.a plot/libplot.a plot/libvrml.a yajl/libyajl.a ccast/libccast.a ccast/axTLS/libaxtls.a tiff/libtiff.a jpeg/libjpeg.a png/libpng.a zlib/libz.a spectro/libconv.a -Ih -I. -Igamut -Irspl -Inumlib -Ixicc -Icgats -Iicc -Iplot -Iyajl -Iccast -Itiff -Ijpeg -Ipng -Izlib -framework Carbon -framework Cocoa -framework IOKit -framework CoreFoundation -framework AppKit -framework AudioToolbox -lm -lpthread || true
           echo "Running under lldb..."
           lldb -b -o "run gamut/RefMediumGamut.gam" -o "bt all" -o "quit" -- gamut/GenRMGam_debug || true
 
