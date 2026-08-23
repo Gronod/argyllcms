@@ -49,7 +49,7 @@ Main GenRMGam : GenRMGam.c ;
 if $(OS) = MACOSX {
 	actions GenFile1
 	{
-		lldb -b -o 'run $(<) $(>[2-])' -o 'bt all' -o 'quit' -- $(>[1])
+		lldb -b -o "run $(<)" -o "bt all" -o "quit" -- $(>[1])
 	}
 }
 
