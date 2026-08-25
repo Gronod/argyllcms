@@ -68,3 +68,9 @@ jobs:
         with:
           name: argyllcms-${{ matrix.os }}-bin
           path: Argyll_V*_${{ matrix.artifact }}.tgz
+
+      - name: Upload Release Asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Argyll_V*_${{ matrix.artifact }}.tgz
