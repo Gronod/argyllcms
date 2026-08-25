@@ -54,3 +54,9 @@ jobs:
         with:
           name: argyllcms-linux-x86_64-bin
           path: Argyll_V*_linux_x86_64_bin.tgz
+
+      - name: Upload Release Asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Argyll_V*_linux_x86_64_bin.tgz
