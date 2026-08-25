@@ -69,3 +69,10 @@ jobs:
         with:
           name: argyllcms-windows-x86_64-bin
           path: Argyll_V*_win64_exe.zip
+
+      - name: Upload Release Asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: akkuman/gitea-release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: Argyll_V*_win64_exe.zip
