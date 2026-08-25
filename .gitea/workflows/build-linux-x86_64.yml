@@ -2,13 +2,8 @@ name: Linux x86_64 Release Build
 
 on:
   push:
-    branches:
-      - '**'
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - '**'
   workflow_dispatch:
 
 jobs:
@@ -60,4 +55,6 @@ jobs:
         uses: akkuman/gitea-release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          name: Release ${{ github.ref_name }}
+          body: "Release ${{ github.ref_name }} built from commit ${{ github.sha }}"
           files: Argyll_V*_linux_x86_64_bin.tgz
