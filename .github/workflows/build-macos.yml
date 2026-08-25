@@ -20,6 +20,8 @@ jobs:
             machtype: arm64-apple-darwin
             artifact: macOS_arm64_bin
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout repository
