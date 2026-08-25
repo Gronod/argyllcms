@@ -747,6 +747,8 @@ void usage(char *diag) {
 	exit(1);
 }
 
+#include "ui.h"
+
 int
 main(int argc, char *argv[]) {
 	int fa, nfa;				/* argument we're looking at */

@@ -72,6 +72,8 @@ usage(int level) {
 	exit(1);
 	}
 
+#include "ui.h"
+
 int main(int argc, char *argv[])
 {
 	int fa,nfa;							/* current argument we're looking at */

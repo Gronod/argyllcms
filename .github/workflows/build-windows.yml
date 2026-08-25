@@ -32,21 +32,20 @@ jobs:
             git
             make
             mingw-w64-x86_64-gcc
+            unzip
             zip
+            bison
             
       - name: Install ftjam
         run: |
-          wget https://github.com/kimgr/ftjam/archive/refs/tags/v2.5.3rc2.tar.gz
-          tar -xzf v2.5.3rc2.tar.gz
-          cd ftjam-2.5.3rc2
-          make
-          cp bin.*/jam.exe /usr/bin/jam.exe
+          wget -q -O ftjam-win32.zip https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2-win32.zip/download
+          unzip ftjam-win32.zip
+          cp jam.exe /usr/bin/jam.exe
           
       - name: Build ArgyllCMS
-        env:
-          COMPILER: MINGW64
         run: |
-          jam -q -fJambase -j$(nproc) -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
+          export MINGW=$(cygpath -m /mingw64)
+          jam -q -fJambase -j1 -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Smoke Tests
         env:
@@ -62,6 +61,7 @@ jobs:
         env:
           COMPILER: MINGW64
         run: |
+          export MINGW=$(cygpath -m /mingw64)
           ./makepackagebin.sh
           
       - name: Upload Artifact

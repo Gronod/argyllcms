@@ -79,6 +79,8 @@ struct _tagsigpair {
 	int dir;			/* 0 = none or out, 1 = in */
 }; typedef struct _tagsigpair tagsigpair;
 
+#include "ui.h"
+
 int
 main(int argc, char *argv[]) {
 	int fa,nfa;				/* argument we're looking at */

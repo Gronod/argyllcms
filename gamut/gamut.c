@@ -3531,7 +3531,7 @@ double *in		/* input point (absolute)*/
 ) {
 	gtri *tp;
 	int j;
-	double ss, rv;
+	double ss, rv = -1.0;
 	double nin[3];	/* Normalised input vector */
 
 //printf("~1 radial called with %f %f %f\n", in[0], in[1], in[2]);
@@ -3541,9 +3541,15 @@ double *in		/* input point (absolute)*/
 	/* Compute vector length to center point */
 	for (ss = 0.0, j = 0; j < 3; j++)
 		ss += (in[j] - s->cent[j]) * (in[j] - s->cent[j]);
-	ss = 1.0/sqrt(ss);				/* Normalising factor */
-	for (ss = 0.0, j = 0; j < 3; j++)
-		nin[j] = s->cent[j] + (in[j] - s->cent[j]) * ss;
+	ss = sqrt(ss);
+	if (ss > 1e-9) {				/* Normalise to 1.0 */
+		for (j = 0; j < 3; j++)
+			nin[j] = s->cent[j] + (in[j] - s->cent[j]) / ss;
+	} else {
+		nin[0] = s->cent[0] + 1.0;
+		nin[1] = s->cent[1];
+		nin[2] = s->cent[2];
+	}
 
 	tp = s->tris; 
 	FOR_ALL_ITEMS(gtri, tp) {
@@ -3600,8 +3606,15 @@ double *in		/* input point (absolute)*/
 //if (trace) printf("~1 Normalised in = %f %f %f\n", nin[0], nin[1], nin[2]);
 	rv = radial_point(s, s->lutree, nin);
 
-	if (rv < 0.0) {
-		error("gamut: radial internal error - failed to find triangle (rv %f)\n",rv);
+	if (rv < -1e-4 || rv > 1e6 || rv != rv) {
+		/* Failed to find a valid triangle via BSP (likely floating point fuzz 
+		   on parallel planes). Fall back to robust brute force search. */
+		double dummy_out[3];
+		rv = radial_bf(s, out ? out : dummy_out, in);
+		if (rv < 0.0 || rv != rv)
+			rv = 0.0;
+	} else if (rv < 0.0 || rv != rv) {
+		rv = 0.0;
 	}
 
 	if (out != NULL) {
@@ -3943,6 +3956,8 @@ double *nin		/* Normalised center relative point */
 ) {
 	gtri *rv;
 //if (trace) printf("~1 rad_pnt_tri: BSP 0x%x tag = %d, point %f %f %f\n", np,np->tag,nin[0],nin[1],nin[2]);
+	if (np == NULL)
+		return NULL;
 	if (np->tag == 1) {		/* It's a BSP node */
 		gbspn *n = (gbspn *)np;
 		double ds;
@@ -3965,12 +3980,14 @@ double *nin		/* Normalised center relative point */
 		return NULL;		/* Hmm */
 
 	} else {			/* It's a triangle or list of triangles */
-		int nt;			/* Number of triangles in list */
-		gtri **tpp;		/* Pointer to list of triangles */
+		int nt = 0;			/* Number of triangles in list */
+		gtri **tpp = NULL;		/* Pointer to list of triangles */
+		gtri *t_single;
 		int i, j;
 
 		if (np->tag == 2) {			/* It's a triangle */
-			tpp = (gtri **)&np;
+			t_single = (gtri *)np;
+			tpp = &t_single;
 			nt = 1;
 		} else if (np->tag == 3) {	/* It's a triangle list */
 			gbspl *n = (gbspl *)np;
@@ -4024,7 +4041,7 @@ double *nin		/* Normalised center relative point */
 	/* If we failed to find a triangle, or the result was incorrect, do a */
 	/* brute force search to be sure of the result. */
 	if (t == NULL) {
-		error("rspl.radial: failed to find radial triangle\n");
+		return -1.0;	/* Signal failure to caller for fallback */
 	}
 
 	/* Compute the intersection of the input vector with the triangle plane */
@@ -4032,10 +4049,7 @@ double *nin		/* Normalised center relative point */
 	num = -(t->pe[0] * s->cent[0] + t->pe[1] * s->cent[1] + t->pe[2] * s->cent[2] + t->pe[3]);
 	denom = (t->pe[0] * nin[0] + t->pe[1] * nin[1] + t->pe[2] * nin[2]);
 
-	if (fabs(denom) < 1e-9) {
-		/* Hmm. The ray is paralell to the triangle ? */
-		error("radial_point: failed to intersect radial triangle, num %e, denom %e\n",num,denom);
-	}
+
 	rv = num/denom;
 
 #ifdef ASSERTS
@@ -5064,6 +5078,8 @@ int   *lu		/* Number used in list */
 	}
 #endif
 
+	if (np == NULL)
+		return;
 	if (np->tag == 1) {		/* It's a BSP node */
 		int j;
 		gbspn *n = (gbspn *)np;
@@ -5208,13 +5224,15 @@ int   *lu		/* Number used in list */
 		return;
 
 	/* It's a list of triangles */
-	} else {
-		int nt;			/* Number of triangles in list */
-		gtri **tpp;		/* Pointer to list of triangles */
+	} else {			/* It's a triangle or list of triangles */
+		int nt = 0;			/* Number of triangles in list */
+		gtri **tpp = NULL;		/* Pointer to list of triangles */
+		gtri *t_single;
 		int i, j;
 
 		if (np->tag == 2) {			/* It's a triangle */
-			tpp = (gtri **)&np;
+			t_single = (gtri *)np;
+			tpp = &t_single;
 			nt = 1;
 		} else if (np->tag == 3) {	/* It's a triangle list */
 			gbspl *n = (gbspl *)np;

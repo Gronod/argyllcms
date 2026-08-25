@@ -186,6 +186,8 @@ void output_curve(
 		out_vals[e] = in_vals[e];
 }
 
+#include "ui.h"
+
 int
 main(int argc, char *argv[]) {
 	int fa,nfa;				/* argument we're looking at */

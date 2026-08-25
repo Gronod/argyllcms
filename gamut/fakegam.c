@@ -55,6 +55,8 @@ void usage(char *diag) {
 }
 
 
+#include "ui.h"
+
 int
 main(int argc, char *argv[]) {
 	int fa,nfa;				/* argument we're looking at */

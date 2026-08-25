@@ -107,6 +107,8 @@ void usage(void) {
 
 static void DE2RGB(double *out, double in);
 
+#include "ui.h"
+
 int
 main(
 	int argc,

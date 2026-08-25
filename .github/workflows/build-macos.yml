@@ -16,11 +16,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-13
+          - os: macos-15-intel
             arch: x86_64
             machtype: x86_64-apple-darwin
             artifact: osx10.6_x86_64_bin
-          - os: macos-latest
+          - os: macos-15
             arch: arm64
             machtype: arm64-apple-darwin
             artifact: macOS_arm64_bin
@@ -30,16 +30,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Install Dependencies
+      - name: Install ftjam
         run: |
-          brew install ftjam
+          wget -q -O ftjam.tar.gz https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2.tar.gz/download
+          tar -xzf ftjam.tar.gz
+          cd ftjam-2.5.2
+          make CC="cc -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-implicit-int"
+          sudo cp bin.*/jam /usr/local/bin/jam
           
       - name: Build ArgyllCMS
         run: |
           export OSTYPE=darwin
           export MACHTYPE=${{ matrix.machtype }}
           export HOSTTYPE=${{ matrix.arch }}
-          jam -q -fJambase -j$(sysctl -n hw.ncpu) -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
+          export CCOPTFLAG="-O0"
+          jam -q -d2 -fJambase -j1 -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Smoke Tests
         env:
