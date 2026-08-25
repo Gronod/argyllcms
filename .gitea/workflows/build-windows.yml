@@ -65,7 +65,7 @@ jobs:
           ./makepackagebin.sh
           
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: argyllcms-windows-x86_64-bin
           path: Argyll_V*_win64_exe.zip
