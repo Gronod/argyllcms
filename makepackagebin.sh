@@ -106,8 +106,9 @@ else if [ "${OSTYPE#*darwin*}" != "$OSTYPE" ] ; then
 		PACKAGE=${PRODUCT}_V${VERSION}_osx10.4_i86_bin.tgz
 	else if [ X$HOSTTYPE = "Xx86_64" \
 		  -o X$COMPILER = "XOSX10_6_X86_64BIT" ] ; then
-		echo "We're on OSX 10 x86_64!"
-		PACKAGE=${PRODUCT}_V${VERSION}_osx10.6_x86_64_bin.tgz
+		echo "We're on MacOS x86_64!"
+		PACKAGE=${PRODUCT}_V${VERSION}_macOS_x86_64_bin.tgz
+		export MACOSX_DEPLOYMENT_TARGET="10.15"	# Minimum target platform version
 	else if [ X$HOSTTYPE = "Xarm64" ] ; then
 		echo "We're on MacOS arm64!"
 		PACKAGE=${PRODUCT}_V${VERSION}_macOS_arm64_bin.tgz
@@ -229,4 +230,3 @@ else
 fi
 
 exit 0
-
