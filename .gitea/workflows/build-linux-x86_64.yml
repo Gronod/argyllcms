@@ -50,7 +50,7 @@ jobs:
           ./makepackagebin.sh
           
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: argyllcms-linux-x86_64-bin
           path: Argyll_V*_linux_x86_64_bin.tgz
