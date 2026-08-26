@@ -47,12 +47,13 @@ jobs:
           ./makepackagebin.sh
           TAG="${{ github.ref_name }}"
           SHORT_SHA="$(git rev-parse --short HEAD)"
+          echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
           mv Argyll_V*_linux_x86_64_bin.tgz "Argyll_${TAG}_${SHORT_SHA}_linux_x86_64_bin.tgz"
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: argyllcms-linux-x86_64-bin
+          name: Argyll_${{ github.ref_name }}_${{ env.SHORT_SHA }}_linux_x86_64_bin
           path: Argyll_*_linux_x86_64_bin.tgz
 
       - name: Upload Release Asset
