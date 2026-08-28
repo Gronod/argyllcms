@@ -167,13 +167,21 @@ fi
 rm -rf $TOPDIR
 mkdir $TOPDIR
 
+# Ensure catalog copies exist if needed for Windows packaging
+if [ -d usb ] ; then
+	if [ -f usb/ArgyllCMS.cat ] ; then
+		[ ! -f usb/ArgyllCMS_x64.cat ] && cp usb/ArgyllCMS.cat usb/ArgyllCMS_x64.cat
+		[ ! -f usb/ArgyllCMS_arm64.cat ] && cp usb/ArgyllCMS.cat usb/ArgyllCMS_arm64.cat
+	fi
+fi
+
 # Collect the names of all the files that we're going to package
-unset topfiles; for i in `cat binfiles`; do topfiles="$topfiles ${i}"; done
-unset docfiles; for i in `cat doc/afiles`; do docfiles="$docfiles doc/${i}"; done
+unset topfiles; for i in `tr -d '\r' < binfiles`; do topfiles="$topfiles ${i}"; done
+unset docfiles; for i in `tr -d '\r' < doc/afiles`; do docfiles="$docfiles doc/${i}"; done
 unset usbfiles;
 for j in ${USBDIRS}; do
 	if [ ${j} ]; then
-		for i in `cat ${j}/${USBBINFILES}`; do usbfiles="$usbfiles ${j}/${i}"; done
+		for i in `tr -d '\r' < ${j}/${USBBINFILES}`; do usbfiles="$usbfiles ${j}/${i}"; done
 	fi
 done
 
@@ -183,16 +191,16 @@ allfiles="${topfiles} bin/* ref/* ${docfiles} ${usbfiles}"
 for i in ${allfiles}; do
 	path=${i%/*}		# extract path without filename
 	file=${i##*/}		# extract filename
-	if [ $path = $i ] ; then
+	if [ "$path" = "$i" ] ; then
 		path=
 	fi
-	if [ X$path != "X" ] ; then
-		mkdir -p $TOPDIR/${path}
+	if [ X"$path" != "X" ] ; then
+		mkdir -p "$TOPDIR/${path}"
 	fi
-	if [ X${file} = "Xafiles" ] ; then
+	if [ X"${file}" = "Xafiles" ] ; then
 		continue
 	fi
-	cp $i $TOPDIR/$i
+	cp "$i" "$TOPDIR/$i" || { echo "Failed to copy $i to $TOPDIR/$i"; exit 1; }
 done
 
 # Create the package

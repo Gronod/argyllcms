@@ -63,6 +63,15 @@ jobs:
           echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
           mv Argyll_V*_win64_exe.zip "Argyll_${TAG}_${SHORT_SHA}_win64_exe.zip"
           
+      - name: Verify Package Contents
+        run: |
+          ZIP_FILE=$(ls Argyll_*_win64_exe.zip)
+          echo "Verifying contents of ${ZIP_FILE}..."
+          unzip -l "${ZIP_FILE}" | grep "usb/ArgyllCMS.inf"
+          unzip -l "${ZIP_FILE}" | grep "usb/bin/amd64/libusb0.sys"
+          unzip -l "${ZIP_FILE}" | grep "doc/ArgyllDoc.html"
+          unzip -l "${ZIP_FILE}" | grep "ReadMe.txt"
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
