@@ -264,6 +264,7 @@ channels
 
 
       Dither 8 bit TIFF values down from 16 bit<br>
+      &nbsp;<a href="#d">-d "string"</a>&nbsp;&nbsp;&nbsp; Custom target label string, or "" to omit labelling<br>
       &nbsp;<a href="#Q">-Q nbits</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 Quantize
 test
@@ -757,6 +758,12 @@ A3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     creating a test chart that should be color managed (perhaps because you want
     to use it to verify the overall operation of the printing system), then you
     can use the <b>-U</b> flag to disable this.<br>
+    <br>
+    <a name="d"></a> The <b>-d</b> parameter allows specifying a custom
+    chart description/label string to be printed along the page/strip borders on
+    generated test target files (TIFF, PostScript, EPS), replacing the default
+    generated chart identifier. If an empty string is provided (<b>-d ""</b>),
+    chart labelling along the page borders is suppressed entirely.<br>
     <br>
     <a name="p"></a> The <b>-p</b> parameter specifies the paper size. The size
     can either be one of the default sizes, <a name="pp"></a>or can be
