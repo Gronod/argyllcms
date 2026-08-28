@@ -463,6 +463,29 @@ static void ps_hexagon(trend *ss,
 	fprintf(s->of,"%f %f %f %f hex\n",w,h,x,y);
 }
 
+/* Helper to escape characters in PostScript string literals */
+static void ps_escape_str(char *dst, int maxdst, const char *src) {
+	int di = 0;
+	if (dst == NULL || maxdst <= 0) return;
+	if (src == NULL) { dst[0] = '\0'; return; }
+	while (*src != '\0' && di < maxdst - 2) {
+		if (*src == '(' || *src == ')' || *src == '\\') {
+			if (di < maxdst - 3) {
+				dst[di++] = '\\';
+				dst[di++] = *src++;
+			} else {
+				break;
+			}
+		} else if (*src == '\r' || *src == '\n') {
+			dst[di++] = ' ';
+			src++;
+		} else {
+			dst[di++] = *src++;
+		}
+	}
+	dst[di] = '\0';
+}
+
 /* A centered string */
 static void ps_string(trend *ss,
 	double x, double y,		/* Bot Left Corner of rectangle in mm from origin */
@@ -470,15 +493,17 @@ static void ps_string(trend *ss,
 	char *str				/* String */
 ) {
 	ps_trend *s = (ps_trend *)ss; 
+	char esc_str[2048];
 
-	if (fabs(w) < 1e-6 || fabs(h) < 1e-6)
-		return;			/* Skip zero sized string */
+	if (fabs(w) < 1e-6 || fabs(h) < 1e-6 || str == NULL || str[0] == '\000')
+		return;			/* Skip zero sized or empty string */
+	ps_escape_str(esc_str, sizeof(esc_str), str);
 	x = mm2pnt(x);
 	y = mm2pnt(y);
 	w = mm2pnt(w);
 	h = mm2pnt(h);
 	fprintf(s->of,"%f scaleTimes\n",h * 0.75);
-	fprintf(s->of,"(%s) %f %f centerShow\n",str,x+w/2.0,y+h/2.0);
+	fprintf(s->of,"(%s) %f %f centerShow\n",esc_str,x+w/2.0,y+h/2.0);
 }
 
 /* A vertically centered string */
@@ -488,15 +513,17 @@ static void ps_vstring(trend *ss,
 	char *str				/* String */
 ) {
 	ps_trend *s = (ps_trend *)ss; 
+	char esc_str[2048];
 
-	if (fabs(w) < 1e-6 || fabs(h) < 1e-6)
-		return;			/* Skip zero sized string */
+	if (fabs(w) < 1e-6 || fabs(h) < 1e-6 || str == NULL || str[0] == '\000')
+		return;			/* Skip zero sized or empty string */
+	ps_escape_str(esc_str, sizeof(esc_str), str);
 	x = mm2pnt(x);
 	y = mm2pnt(y);
 	w = mm2pnt(w);
 	h = mm2pnt(h);
 	fprintf(s->of,"%f scaleTimes\n",w * 0.75);
-	fprintf(s->of,"(%s) %f %f vcenterShow\n",str,x-w/2.0,y+h/2.0);
+	fprintf(s->of,"(%s) %f %f vcenterShow\n",esc_str,x-w/2.0,y+h/2.0);
 }
 
 /* A dotted line */
@@ -872,6 +899,8 @@ static void tiff_string(trend *ss,
 	tiff_trend *s = (tiff_trend *)ss; 
 	double sw = 0.0, sh = 0.0;
 
+	if (fabs(w) < 1e-6 || fabs(h) < 1e-6 || str == NULL || str[0] == '\000')
+		return;			/* Skip zero sized or empty string */
 	sh = h * 0.57;
 	meas_string2d(s->r,&sw,NULL,timesr_b,str,sh,0);
 	/* Center the string within the recangle */
@@ -889,6 +918,8 @@ static void tiff_vstring(trend *ss,
 	tiff_trend *s = (tiff_trend *)ss; 
 	double sw = 0.0, sh = 0.0;
 
+	if (fabs(w) < 1e-6 || fabs(h) < 1e-6 || str == NULL || str[0] == '\000')
+		return;			/* Skip zero sized or empty string */
 	x -= w;		/* Make it bot left corner */
 	sw = w * 0.57;
 	meas_string2d(s->r,NULL, &sh,timesr_b,str,sw,3);
@@ -2265,6 +2296,9 @@ int *p_npat			/* Return number of patches including padding */
 	if (scanc & 2) 			/* Scan compatiblity */
 		sxwi = pwid/2.0;	/* First row patches extra width */
 
+	if (label == NULL || label[0] == '\000')
+		dopglabel = 0;		/* Omit per-page labelling */
+
 	/* Compute limits for this page size */
 	/* Figure the available space for patches */
 	mints = bord + txhisl + lcar;		/* Minimum top space due to border, text and clear area */
@@ -3009,6 +3043,7 @@ void usage(char *diag, ...) {
 	fprintf(stderr," -C               Don't use TIFF compression\n");
 	fprintf(stderr," -N               Use TIFF alpha N channels more than 4\n");
 	fprintf(stderr," -D               Dither 8 bit TIFF values down from 16 bit\n");
+	fprintf(stderr," -d label         Custom chart description/label string, or \"\" to omit labelling\n");
 	fprintf(stderr," -Q nbits         Quantize test values to fit in nbits\n");
 	fprintf(stderr," -R rsnum         Use given random start number\n");
 	fprintf(stderr," -K file.cal      Apply printer calibration to patch values and include in .ti2\n");
@@ -3070,7 +3105,9 @@ int main(int argc, char *argv[]) {
 	int nchan = 0;			/* Number of device chanels */
 	int i;
 	int si, fi, wi;			/* Sample id index, field index, keyWord index */
-	char label[400];		/* Space for chart label */
+	char *custom_label = NULL;	/* Custom chart label string */
+	int custom_label_set = 0;	/* Flag, custom label was specified */
+	char label[1024];		/* Space for chart label */
 	double marg = DEF_MARGINE;	/* Margin from paper edge in mm */
 	int nosubmarg = 0;		/* Don't subtract it from raster */
 	int nolpcbord = 0;		/* NZ to suppress left paper clip border */
@@ -3301,6 +3338,13 @@ int main(int argc, char *argv[]) {
 			/* use 16->8 bit dithering for 8 bit TIFF  */
 			else if (argv[fa][1] == 'D') {
 				tiffdith = 1;
+			}
+			/* Custom chart label string */
+			else if (argv[fa][1] == 'd') {
+				fa = nfa;
+				if (na == NULL) usage("Expected argument to -d");
+				custom_label = na;
+				custom_label_set = 1;
 			}
 			/* Don't use TIFF compression */
 			else if (argv[fa][1] == 'C') {
@@ -3789,8 +3833,18 @@ int main(int argc, char *argv[]) {
 		pcol = pcold;		/* Density spacer alues */
 
 	
-	sprintf(label, "ArgyllCMS - Chart \"%s\" (%s %d) %s",
-	               psname, rand ? "Random Start" : "Chart ID", rstart, atm);
+	if (custom_label_set) {
+		if (custom_label[0] != '\000') {
+			strncpy(label, custom_label, sizeof(label) - 1);
+			label[sizeof(label) - 1] = '\000';
+			ocg->add_kword(ocg, 0, "CHART_LABEL", custom_label, NULL);
+		} else {
+			label[0] = '\000';
+		}
+	} else {
+		sprintf(label, "ArgyllCMS - Chart \"%s\" (%s %d) %s",
+		               psname, rand ? "Random Start" : "Chart ID", rstart, atm);
+	}
 	generate_file(itype, itype_mod, psname, cols, npat, applycal ? cal : NULL, label,
 	            pap != NULL ? pap->w : cwidth, pap != NULL ? pap->h : cheight,
 	            marg, nosubmarg, nollimit, nolpcbord, rand, rstart, saix, paix,	ixord,
