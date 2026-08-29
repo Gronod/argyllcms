@@ -203,36 +203,37 @@ static int con_char(int wait) {
 		/* We assume pipe has been set to NOWAIT mode. */
 		} else if (stdin_type == FILE_TYPE_PIPE) {
 			int i, bib;
-//fprintf(stderr,"~1  top of pipe\n");
+			DWORD bytes_avail = 0;
+
+			/* Check available bytes in pipe before blocking */
+			if (!PeekNamedPipe(stdinh, NULL, 0, NULL, &bytes_avail, NULL) || bytes_avail == 0) {
+				if (!wait) {
+					return 0;
+				}
+			}
 
 			for (bib = 0; bib < 10;) {
-//fprintf(stderr,"~1  got %d in buf\n",bib);
+				if (!wait) {
+					if (!PeekNamedPipe(stdinh, NULL, 0, NULL, &bytes_avail, NULL) || bytes_avail == 0) {
+						break;
+					}
+				}
 				if ((!ReadFile(stdinh, buf + bib, 10 - bib, &bread, NULL) || bread == 0)
 				 && !wait) {
-//fprintf(stderr,"~1  no chars waiting\n");
 					break;
 				}
 				bib += bread;
 
 				for (i = 0; i < bib; i++) {
 					if (buf[i] == '\n' || buf[i] == '\r' || buf[i] == 0x3) {
-//fprintf(stderr,"~1  found lf at ix %d\n",i);
 						break;
 					}
 				}
 				if (i < bib) {
-//fprintf(stderr,"~1  found lf\n");
 					break;		/* Found '\n' */
 				}
 				Sleep(100);		/* Wait for a line ending in '\n' */
 			}
-
-//if (bread > 0) {
-//fprintf(stderr,"~1  read %d: ",bread);
-//for (i = 0; i < bread; i++)
-//fprintf(stderr," 0x%x",buf[i]);
-//fprintf(stderr,"\n//");
-//}
 			rv = buf[0];
 
 		/* Assume a file. This will have very limited functionality. */
