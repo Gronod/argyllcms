@@ -113,6 +113,13 @@ else if [ "${OSTYPE#*darwin*}" != "$OSTYPE" ] ; then
 		echo "We're on MacOS arm64!"
 		PACKAGE=${PRODUCT}_V${VERSION}_macOS_arm64_bin.tgz
 		export MACOSX_DEPLOYMENT_TARGET="11.0"	# Minimum target platform version
+	else if [ X$HOSTTYPE = "Xuniversal" \
+		  -o X$MACHTYPE = "Xuniversal-apple-darwin" \
+		  -o X$COMPILER = "XUNIVERSAL" ] ; then
+		echo "We're on MacOS Universal!"
+		PACKAGE=${PRODUCT}_V${VERSION}_macOS_universal_bin.tgz
+		export MACOSX_DEPLOYMENT_TARGET="10.15"	# Minimum target platform version
+	fi
 	fi
 	fi
 	fi
@@ -145,23 +152,25 @@ fi
 
 echo "Making GNU $PRODUCT binary distribution $PACKAGE for Version $VERSION"
 
-# Clean up so we get a solid build
-# .sp come from profile, .cht from scanin and .ti3 from spectro
-rm -f bin/*.exe bin/*.dll
-rm -f ref/*.sp ref/*.cht ref/*.ti2
+if [ X$NO_BUILD = "X" ] ; then
+	# Clean up so we get a solid build
+	# .sp come from profile, .cht from scanin and .ti3 from spectro
+	rm -f bin/*.exe bin/*.dll
+	rm -f ref/*.sp ref/*.cht ref/*.ti2
 
-if [ X$CROSS_COMPILE = "X" ] ; then		# If not cross compiling
-  echo "Cleaning before build ..."
-  if ! jam -fJambase -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true clean ; then
-    	echo "Clean failed!"
-  	exit 1
-  fi 
-fi
+	if [ X$CROSS_COMPILE = "X" ] ; then		# If not cross compiling
+	  echo "Cleaning before build ..."
+	  if ! jam -fJambase -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true clean ; then
+	    	echo "Clean failed!"
+	  	exit 1
+	  fi 
+	fi
 
-# Make sure it's built and installed
-if ! jam -q -fJambase -j${NUMBER_OF_PROCESSORS:-1} -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install ; then
-	echo "Build failed!"
-	exit 1
+	# Make sure it's built and installed
+	if ! jam -q -fJambase -j${NUMBER_OF_PROCESSORS:-1} -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install ; then
+		echo "Build failed!"
+		exit 1
+	fi 
 fi 
 
 rm -rf $TOPDIR
