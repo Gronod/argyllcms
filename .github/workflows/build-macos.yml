@@ -112,11 +112,23 @@ jobs:
           for file in raw-bin-arm64/*; do
             bin_name=$(basename "$file")
             if [ -f "raw-bin-x86_64/$bin_name" ]; then
-              echo "Creating universal binary with lipo: $bin_name"
-              lipo -create "raw-bin-x86_64/$bin_name" "raw-bin-arm64/$bin_name" -output "bin/$bin_name"
-              chmod +x "bin/$bin_name"
+              if file "raw-bin-arm64/$bin_name" | grep -q "Mach-O" && file "raw-bin-x86_64/$bin_name" | grep -q "Mach-O"; then
+                echo "Creating universal binary with lipo: $bin_name"
+                lipo -create "raw-bin-x86_64/$bin_name" "raw-bin-arm64/$bin_name" -output "bin/$bin_name"
+                chmod +x "bin/$bin_name"
+              else
+                echo "Non Mach-O file, copying directly: $bin_name"
+                cp "$file" "bin/$bin_name"
+              fi
             else
               echo "Warning: $bin_name not found in raw-bin-x86_64, copying arm64 version"
+              cp "$file" "bin/$bin_name"
+            fi
+          done
+          for file in raw-bin-x86_64/*; do
+            bin_name=$(basename "$file")
+            if [ ! -f "bin/$bin_name" ]; then
+              echo "Warning: $bin_name only found in raw-bin-x86_64, copying x86_64 version"
               cp "$file" "bin/$bin_name"
             fi
           done
