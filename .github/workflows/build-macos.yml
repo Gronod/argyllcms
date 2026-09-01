@@ -11,11 +11,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-15-intel
+          - os: macos-latest
             arch: x86_64
             machtype: x86_64-apple-darwin
             artifact: macOS_x86_64_bin
-          - os: macos-15
+          - os: macos-latest
             arch: arm64
             machtype: arm64-apple-darwin
             artifact: macOS_arm64_bin
