@@ -43,6 +43,16 @@ jobs:
           export CCOPTFLAG="-O0"
           jam -q -d2 -fJambase -j1 -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
+      - name: Ad-hoc Sign & Verify Binaries
+        run: |
+          for f in bin/*; do
+            if [ -f "$f" ] && file "$f" | grep -q "Mach-O"; then
+              echo "Ad-hoc signing $f"
+              codesign -f -s - "$f"
+              codesign -dvv "$f"
+            fi
+          done
+
       - name: Smoke Tests
         env:
           ARGYLL_NOT_INTERACTIVE: "1"
@@ -116,6 +126,7 @@ jobs:
                 echo "Creating universal binary with lipo: $bin_name"
                 lipo -create "raw-bin-x86_64/$bin_name" "raw-bin-arm64/$bin_name" -output "bin/$bin_name"
                 chmod +x "bin/$bin_name"
+                codesign -f -s - "bin/$bin_name"
               else
                 echo "Non Mach-O file, copying directly: $bin_name"
                 cp "$file" "bin/$bin_name"
@@ -123,6 +134,9 @@ jobs:
             else
               echo "Warning: $bin_name not found in raw-bin-x86_64, copying arm64 version"
               cp "$file" "bin/$bin_name"
+              if file "bin/$bin_name" | grep -q "Mach-O"; then
+                codesign -f -s - "bin/$bin_name"
+              fi
             fi
           done
           for file in raw-bin-x86_64/*; do
@@ -130,18 +144,22 @@ jobs:
             if [ ! -f "bin/$bin_name" ]; then
               echo "Warning: $bin_name only found in raw-bin-x86_64, copying x86_64 version"
               cp "$file" "bin/$bin_name"
+              if file "bin/$bin_name" | grep -q "Mach-O"; then
+                codesign -f -s - "bin/$bin_name"
+              fi
             fi
           done
 
-      - name: Verify Architecture & Smoke Tests
+      - name: Verify Architecture & Code Signatures
         env:
           ARGYLL_NOT_INTERACTIVE: "1"
           ARGYLL_EXCLUDE_SERIAL_SCAN: "1"
         run: |
-          echo "=== Binary Architecture Verification ==="
+          echo "=== Binary Architecture & Signature Verification ==="
           for file in bin/*; do
-            if [ -f "$file" ]; then
+            if [ -f "$file" ] && file "$file" | grep -q "Mach-O"; then
               file "$file"
+              codesign -dvv "$file"
             fi
           done
           echo "=== Smoke Tests ==="
