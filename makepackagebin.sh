@@ -7,7 +7,7 @@ echo "Script to invoke Jam and then package the binary release."
 PRODUCT=Argyll
 
 # Set the environment string VERSION from the #define, ie 1.0.0
-VERSION=`grep ARGYLL_VERSION_STR h/aconfig.h | head -1 | sed 's/# define ARGYLL_VERSION_STR //' | sed 's/"//g'`
+VERSION=`grep ARGYLL_VERSION_STR h/aconfig.h | head -1 | sed 's/# define ARGYLL_VERSION_STR //' | sed 's/\"//g'`
 
 #   Typical environment variables:
 #   (NOTE some systems don't export these ENV vars. by default !!!)
@@ -172,6 +172,17 @@ if [ X$NO_BUILD = "X" ] ; then
 		exit 1
 	fi 
 fi 
+
+# Apply ad-hoc code signatures to macOS Mach-O binaries before staging
+if [ "${OSTYPE#*darwin*}" != "$OSTYPE" ] ; then
+	echo "=== Applying ad-hoc code signatures to macOS Mach-O binaries ==="
+	for f in bin/* ; do
+		if [ -f "$f" ] && file "$f" | grep -q "Mach-O" ; then
+			echo "Signing $f..."
+			codesign -f -s - "$f" || true
+		fi
+	done
+fi
 
 rm -rf $TOPDIR
 mkdir $TOPDIR
