@@ -348,6 +348,9 @@ i1pro_code add_i1proimp(i1pro *p);
 /* Destroy implementation structure */
 void del_i1proimp(i1pro *p);
 
+/* Close instrument (stop threads, update log, turn off LEDs, close coms) */
+i1pro_code i1pro_close_port(i1pro *p);
+
 /* ============================================================ */
 /* Error codes returned from i1pro_imp */
 

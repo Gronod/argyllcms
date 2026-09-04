@@ -948,6 +948,8 @@ static void
 i1pro_del(inst *pp) {
 	i1pro *p = (i1pro *)pp;
 
+	/* Shut down instrument hardware and close the port, then free state */
+	i1pro_close_port(p);
 	del_i1proimp(p);
 	if (p->icom != NULL)
 		p->icom->del(p->icom);
