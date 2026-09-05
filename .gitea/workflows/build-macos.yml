@@ -1,0 +1,77 @@
+name: macOS x86_64 Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install ftjam
+        run: |
+          wget -q -O ftjam.tar.gz https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2.tar.gz/download
+          tar -xzf ftjam.tar.gz
+          cd ftjam-2.5.2
+          make CC="cc -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-implicit-int"
+          sudo cp bin.*/jam /usr/local/bin/jam
+          
+      - name: Build ArgyllCMS
+        run: |
+          export OSTYPE=darwin
+          export MACHTYPE=x86_64-apple-darwin
+          export HOSTTYPE=x86_64
+          export CCOPTFLAG="-O0"
+          jam -q -d2 -fJambase -j1 -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
+          
+      - name: Ad-hoc Sign & Verify Binaries
+        run: |
+          for f in bin/*; do
+            if [ -f "$f" ] && file "$f" | grep -q "Mach-O"; then
+              echo "Ad-hoc signing $f"
+              codesign -f -s - "$f"
+              codesign -dvv "$f"
+            fi
+          done
+
+      - name: Smoke Tests
+        env:
+          ARGYLL_NOT_INTERACTIVE: "1"
+          ARGYLL_EXCLUDE_SERIAL_SCAN: "1"
+        run: |
+          ./bin/dispcal -? || true
+          ./bin/chartread -? || true
+          ./bin/colprof -? || true
+          ./bin/targen -? || true
+          
+      - name: Package Release
+        run: |
+          export OSTYPE=darwin
+          export MACHTYPE=x86_64-apple-darwin
+          export HOSTTYPE=x86_64
+          ./makepackagebin.sh
+          TAG="${{ github.ref_name }}"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
+          mv Argyll_V*_macOS_x86_64_bin.tgz "Argyll_${TAG}_${SHORT_SHA}_macOS_x86_64_bin.tgz"
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Argyll_${{ github.ref_name }}_${{ env.SHORT_SHA }}_macOS_x86_64_bin
+          path: Argyll_*_macOS_x86_64_bin.tgz
+
+      - name: Upload Release Asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: akkuman/gitea-release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Release ${{ github.ref_name }}
+          body: "Release ${{ github.ref_name }} built from commit ${{ github.sha }}"
+          files: Argyll_*_macOS_x86_64_bin.tgz

@@ -389,8 +389,106 @@ i1pro_code add_i1proimp(i1pro *p) {
 	return I1PRO_OK;
 }
 
-/* Shutdown instrument, and then destroy */
-/* implementation structure */
+/* Stop background threads (switch monitoring & delayed trigger) */
+static void
+i1pro_stop_threads(i1pro *p) {
+	i1proimp *m;
+	int i;
+
+	if (p == NULL || p->m == NULL)
+		return;
+	m = (i1proimp *)p->m;
+
+	/* Stop the switch monitoring thread first so it isn't using the */
+	/* communication channel while we shut down the instrument. */
+	if (m->th != NULL) {
+		m->th_term = 1;			/* Tell thread to exit on error */
+
+		/* Ask the instrument to stop sending switch events and cancel */
+		/* any outstanding switch read. Only do this if the port is still  */
+		/* open and the required method pointers are valid. */
+		if (p->icom != NULL && p->icom->is_open
+		 && p->icom->usb_control != NULL
+		 && p->icom->usb_cancel_io != NULL) {
+			i1pro_terminate_switch(p);
+		}
+
+		/* Give the thread a chance to exit cleanly (up to 5 seconds). */
+		for (i = 0; m->th_termed == 0 && i < 100; i++)
+			msec_sleep(50);
+
+		if (m->th_termed == 0) {
+			a1logd(p->log,3,"i1pro switch thread did not terminate, forcing\n");
+			if (m->th->terminate != NULL)
+				m->th->terminate(m->th);
+		}
+
+		if (m->th->wait != NULL)
+			m->th->wait(m->th);
+		if (m->th->del != NULL)
+			m->th->del(m->th);
+		m->th = NULL;
+
+		usb_uninit_cancel(&m->sw_cancel);		/* Don't need cancel token now */
+		usb_uninit_cancel(&m->rd_sync);			/* Don't need sync token now */
+		a1logd(p->log,5,"i1pro switch thread terminated\n");
+	}
+
+	/* Stop the delayed trigger thread if it is still running */
+	if (m->trig_thread != NULL) {
+		if (m->trig_thread->wait != NULL)
+			m->trig_thread->wait(m->trig_thread);
+		if (m->trig_thread->del != NULL)
+			m->trig_thread->del(m->trig_thread);
+		m->trig_thread = NULL;
+		a1logd(p->log,5,"i1pro trigger thread terminated\n");
+	}
+}
+
+/* Stop any pending I/O, shut down the instrument hardware, and close the */
+/* communication port. This is separate from freeing the implementation data. */
+i1pro_code
+i1pro_close_port(i1pro *p) {
+	i1pro_code ev = I1PRO_OK;
+	i1proimp *m;
+
+	a1logd(p->log,3,"i1pro_close_port: called\n");
+
+	if (p->m == NULL)
+		return I1PRO_OK;
+	m = (i1proimp *)p->m;
+
+	/* Stop the switch monitoring thread and trigger thread first so they */
+	/* aren't using the communication channel while we shut down the instrument. */
+	i1pro_stop_threads(p);
+
+	/* Update usage log/calibration for Rev A..D before closing the port */
+	if (p->dtype != instI1Pro2 && p->icom != NULL && p->icom->is_open
+	 && p->icom->usb_control != NULL && p->icom->usb_write != NULL) {
+		i1pro_code uev;
+		if ((uev = i1pro_update_log(p)) != I1PRO_OK) {
+			a1logd(p->log,2,"i1pro_update_log: Updating the cal and log parameters to"
+			                                              " EEProm failed failed\n");
+		}
+	}
+
+	/* Turn off i1Pro2/Rev E indicator LEDs before closing the port. */
+	/* Only attempt the write if the port is still actively open and the */
+	/* required USB method pointers are valid. Rev A..D do not have LEDs. */
+	if (p->dtype == instI1Pro2 && p->icom != NULL && p->icom->is_open
+	 && p->icom->usb_control != NULL && p->icom->usb_write != NULL) {
+		i1pro2_indLEDoff(p);	/* Ignore error - we're shutting down */
+	}
+
+	/* Close the underlying communication port */
+	if (p->icom != NULL && p->icom->is_open && p->icom->close_port != NULL) {
+		p->icom->close_port(p->icom);
+	}
+
+	return ev;
+}
+
+/* Destroy implementation structure */
 void del_i1proimp(i1pro *p) {
 
 	a1logd(p->log,5,"i1pro_del called\n");
@@ -404,38 +502,28 @@ void del_i1proimp(i1pro *p) {
 		int i, j;
 		i1proimp *m = (i1proimp *)p->m;
 		i1pro_state *s;
-		i1pro_code ev;
 
-		if (p->dtype != instI1Pro2 && (ev = i1pro_update_log(p)) != I1PRO_OK) {
-			a1logd(p->log,2,"i1pro_update_log: Updating the cal and log parameters to"
-			                                              " EEProm failed failed\n");
+		/* Defensive guard: ensure background threads are terminated and joined */
+		/* before freeing state, in case i1pro_close_port() was not called. */
+		i1pro_stop_threads(p);
+
+		/* Defensive guard: update usage log/cal for Rev A..D if port is still open */
+		if (p->dtype != instI1Pro2 && p->icom != NULL && p->icom->is_open
+		 && p->icom->usb_control != NULL && p->icom->usb_write != NULL) {
+			i1pro_code uev;
+			if ((uev = i1pro_update_log(p)) != I1PRO_OK) {
+				a1logd(p->log,2,"i1pro_update_log: Updating the cal and log parameters to"
+				                                              " EEProm failed failed\n");
+			}
 		}
 
-		/* i1pro_terminate_switch() seems to fail on a rev A & Rev C ?? */
-		if (m->th != NULL) {		/* Terminate switch monitor thread */
-			m->th_term = 1;			/* Tell thread to exit on error */
-			i1pro_terminate_switch(p);
-			
-			for (i = 0; m->th_termed == 0 && i < 5; i++)
-				msec_sleep(50);		/* Wait for thread to terminate */
-			if (i >= 5) {
-				a1logd(p->log,5,"i1pro switch thread termination failed\n");
-				m->th->terminate(m->th);	/* Try and force thread to terminate */
-			}
-			/* Strange Mac M2/rosetta bug ?? */
-			if (m->th->del == NULL) {
-				a1logd(p->log,1,"i1pro_del: ,m->th-del is NULL!!!");
-			} else {
-				m->th->del(m->th);
-			}
-			usb_uninit_cancel(&m->sw_cancel);		/* Don't need cancel token now */
-			usb_uninit_cancel(&m->rd_sync);			/* Don't need sync token now */
-			a1logd(p->log,5,"i1pro switch thread terminated\n");
-		}
-
-		if (m->trig_thread != NULL) {
-			m->trig_thread->del(m->trig_thread);
-			a1logd(p->log,5,"i1pro trigger thread terminated\n");
+		/* Defensive guard: if the com port is still open and this is an */
+		/* i1Pro2, make sure the indicator LEDs are turned off before any */
+		/* memory is freed. In normal teardown i1pro_close_port() has */
+		/* already done this, but the guard protects any direct call paths. */
+		if (p->dtype == instI1Pro2 && p->icom != NULL && p->icom->is_open
+		 && p->icom->usb_control != NULL && p->icom->usb_write != NULL) {
+			i1pro2_indLEDoff(p);
 		}
 
 		/* Free any per mode data */
