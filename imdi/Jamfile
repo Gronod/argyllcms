@@ -33,16 +33,18 @@ if $(NT) && $(MINGW64) {
 # imdi low level cgen test code
 Main ctest : ctest.c cgen.c ;
 
-# make imdi code program
-Main imdi_make : imdi_make.c imdi_gen.c cgen.c ;
-
 HDRS = ../h ../numlib ;
 LINKLIBS = ../numlib/libnum ;
 
-# GenFile source.c : program args ;	make custom file
-# Generate all the kernel files
-GenFileND imdi_k.h : imdi_make $(IMDI_MAKE_OPT) -d [ NormPaths $(DOT) ] ;
-Clean clean : imdi_k.c ;
+# make imdi code program
+if ! [ GLOB imdi : imdi_k.h ] || ! [ GLOB imdi : imdi_k.c ] {
+	Main imdi_make : imdi_make.c imdi_gen.c cgen.c ;
+
+	# GenFile source.c : program args ;	make custom file
+	# Generate all the kernel files
+	GenFileND imdi_k.h : imdi_make $(IMDI_MAKE_OPT) -d [ NormPaths $(DOT) ] ;
+	Clean clean : imdi_k.c ;
+}
 
 # imdi library
 Library libimdi : imdi.c imdi_tab.c ;

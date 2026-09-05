@@ -1045,7 +1045,25 @@ else if $(UNIX)
 		LINKFLAGS 		+= -framework Carbon ;		# default for .c
 		LINKFLAGS       += -framework Cocoa ;		# default for .m
 
-		if $(COMPILER) = "OSX10_6_X86_64BIT" {
+		if $(TARGET_ARCH) = "arm64"
+		 || $(HOSTTYPE) = "arm64"
+		 || $(MACHTYPE) = "arm64-apple-darwin" {
+			ECHO "Target architecture: macOS ARM 64-bit (arm64)" ;
+			TARGET64 = true ;
+			CCFLAGS += -arch arm64 ;
+			C++FLAGS += -arch arm64 ;
+			LINKFLAGS += -arch arm64 ;
+
+		} else if $(TARGET_ARCH) = "x86_64"
+		       || $(HOSTTYPE) = "x86_64"
+		       || $(MACHTYPE) = "x86_64-apple-darwin" {
+			ECHO "Target architecture: macOS Intel 64-bit (x86_64)" ;
+			TARGET64 = true ;
+			CCFLAGS += -arch x86_64 ;
+			C++FLAGS += -arch x86_64 ;
+			LINKFLAGS += -arch x86_64 ;
+
+		} else if $(COMPILER) = "OSX10_6_X86_64BIT" {
 			ECHO "We're cross compiling to OSX 10.6 AMD/Intel 64 bit" ;
 			# setup script needs to export MACOSX_DEPLOYMENT_TARGET="10.6"
 			# and                   export CROSS_CFLAGS=--target=x86_64-apple-macosx10.6.0
