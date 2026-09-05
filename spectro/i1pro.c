@@ -170,8 +170,13 @@ i1pro_determine_capabilities(i1pro *p) {
 			| inst2_user_switch_trig
 			| inst2_bidi_scan
 			| inst2_has_scan_toll
-			| inst2_no_feedback
 	        ;
+
+	if (p->dtype == instI1Pro2) {
+		p->cap2 |= inst2_has_leds;
+	} else {
+		p->cap2 |= inst2_no_feedback;
+	}
 
 	if (p->m != NULL) {
 		i1proimp *m = (i1proimp *)p->m;
@@ -943,6 +948,17 @@ i1pro_get_set_opt(inst *pp, inst_opt_type m, ...) {
 	}
 }
 
+/* Set device indicator LED status */
+static inst_code
+i1pro_set_led_state(inst *pp, inst_led_state state) {
+	i1pro *p = (i1pro *)pp;
+
+	if (p->dtype != instI1Pro2)
+		return inst_unsupported;
+
+	return i1pro_interp_code(p, i1pro_imp_set_led_state(p, state));
+}
+
 /* Destroy ourselves */
 static void
 i1pro_del(inst *pp) {
@@ -984,6 +1000,7 @@ extern i1pro *new_i1pro(icoms *icom, instType dtype) {
 	p->meas_delay        = i1pro_meas_delay;
 	p->white_change      = i1pro_white_change;
 	p->interp_error      = i1pro_interp_error;
+	p->set_led_state     = i1pro_set_led_state;
 	p->del               = i1pro_del;
 
 	p->icom = icom;

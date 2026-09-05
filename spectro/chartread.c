@@ -204,6 +204,17 @@ typedef struct {
 extern int json_ui_out;
 int json_ui_out = 0;
 
+static int g_use_leds = 0;		/* Enable i1Pro 2 visual LED feedback */
+
+/* Update instrument LED state safely */
+static void update_led_state(inst *it, inst_led_state state) {
+	if (!g_use_leds || it == NULL)
+		return;
+	if (it->set_led_state != NULL) {
+		it->set_led_state(it, state);
+	}
+}
+
 static void compute_patch_metrics(chcol *scb, double *eLab, double *mLab) {
 	/* Expected Lab */
 	if (scb->eXYZ[0] != 0.0 || scb->eXYZ[1] != 0.0 || scb->eXYZ[2] != 0.0) {
@@ -1486,8 +1497,10 @@ a1log *log			/* verb, debug & error log */
 
 		/* Do any needed calibration before the user places the instrument on a desired spot */
 		if (it->needs_calibration(it) & inst_calt_n_dfrble_mask) {
+			update_led_state(it, inst_led_cal_wait);
 			if ((rv = inst_handle_calibrate(it, inst_calt_needed, inst_calc_none, NULL, NULL, 0))
 			                                                                    != inst_ok) {
+				update_led_state(it, inst_led_off);
 				printf("\nCalibration failed with error :'%s' (%s)\n",
 	       	       it->inst_interp_error(it, rv), it->interp_error(it, rv));
 				it->del(it);
@@ -1495,6 +1508,7 @@ a1log *log			/* verb, debug & error log */
 					free(pfname);
 				return -1;
 			}
+			update_led_state(it, inst_led_off);
 		}
 
 		/* Enable (switch or user) via uicallback trigger if possible */
@@ -1637,6 +1651,7 @@ a1log *log			/* verb, debug & error log */
 					printf("Press any other key to start:%s",fl_end);
 				}
 				do_fflush();
+				update_led_state(it, inst_led_row_ready);
 				if ((rv = it->read_strip(it, "STRIP", stipa+nextrap, nn, guide, plen, glen, tlen, vals)) != inst_ok
 				 && (rv & inst_mask) != inst_user_trig) {
 
@@ -1698,6 +1713,7 @@ a1log *log			/* verb, debug & error log */
 							printf("Hit Esc or 'q' to give up, any other key to retry:%s",fl_end);
 							do_fflush();
 							if ((ch = next_con_char()) == 0x1b || ch == 0x3 || ch == 'q' || ch == 'Q') {
+								update_led_state(it, inst_led_off);
 								printf("\n");
 								if (nn != NULL) free(nn);
 								free(vals);
@@ -1717,7 +1733,9 @@ a1log *log			/* verb, debug & error log */
 						if (cap2 & inst2_no_feedback)
 							bad_beep();
 						printf("\nStrip read failed because instruments needs calibration\n");
+						update_led_state(it, inst_led_cal_wait);
 						ev = inst_handle_calibrate(it, inst_calt_needed, inst_calc_none, NULL, NULL, 0);
+						update_led_state(it, inst_led_off);
 						if (ev != inst_ok) {	/* Abort or fatal error */
 							if (nn != NULL) free(nn);
 							free(vals);
@@ -1735,12 +1753,14 @@ a1log *log			/* verb, debug & error log */
 
 					/* Deal with a misread */
 					} else if ((rv & inst_mask) == inst_misread) {
+						update_led_state(it, inst_led_row_fail);
 						if (cap2 & inst2_no_feedback)
 							bad_beep();
 						empty_con_chars();
 						printf("\nStrip read failed due to misread (%s)\n",it->interp_error(it, rv));
 						printf("Hit Esc to give up, any other key to retry%s:",fl_end); do_fflush();
 						if ((ch = next_con_char()) == 0x1b || ch == 0x3 || ch == 'q' || ch == 'Q') {
+							update_led_state(it, inst_led_off);
 							printf("\n");
 							if (nn != NULL) free(nn);
 							free(vals);
@@ -1754,12 +1774,14 @@ a1log *log			/* verb, debug & error log */
 
 					/* Deal with a communications error */
 					} else if ((rv & inst_mask) == inst_coms_fail) {
+						update_led_state(it, inst_led_row_fail);
 						if (cap2 & inst2_no_feedback)
 							bad_beep();
 						empty_con_chars();
 						printf("\nStrip read failed due to communication problem.\n");
 						printf("Hit Esc or 'q' to give up, any other key to retry:%s",fl_end); do_fflush();
 						if ((ch = next_con_char()) == 0x1b || ch == 0x3 || ch == 'q' || ch == 'Q') {
+							update_led_state(it, inst_led_off);
 							printf("\n");
 							if (nn != NULL) free(nn);
 							free(vals);
@@ -1798,12 +1820,14 @@ a1log *log			/* verb, debug & error log */
 
 					/* Some other error. Treat it as fatal */
 					} else {
+						update_led_state(it, inst_led_row_fail);
 						if (cap2 & inst2_no_feedback)
 							bad_beep();
 						printf("\nStrip read failed due unexpected error :'%s' (%s)\n",
 				       	       it->inst_interp_error(it, rv), it->interp_error(it, rv));
 						printf("Hit Esc or 'q' to give up, any other key to retry:%s",fl_end); do_fflush();
 						if ((ch = next_con_char()) == 0x1b || ch == 0x3 || ch == 'q' || ch == 'Q') {
+							update_led_state(it, inst_led_off);
 							printf("\n");
 							if (nn != NULL) free(nn);
 							free(vals);
@@ -1953,6 +1977,7 @@ a1log *log			/* verb, debug & error log */
 							return -1;
 						}
 						if (ch != 0x0d && ch != 0x0a) { 			/* !(CR or LF) */
+							update_led_state(it, inst_led_row_fail);
 							printf("\n");
 							continue;		/* Try again */
 						}
@@ -1976,6 +2001,7 @@ a1log *log			/* verb, debug & error log */
 						printf("\nThere is at least one patch with an very unexpected response! (DeltaE %f)\n",werror);
 						printf("Hit Return to use it anyway, any other key to retry, Esc or  'q' to give up:%s",fl_end); do_fflush();
 						if ((ch = next_con_char()) == 0x1b || ch == 0x3 || ch == 'q' || ch == 'Q') {
+							update_led_state(it, inst_led_off);
 							printf("\n");
 							if (nn != NULL) free(nn);
 							free(vals);
@@ -1985,6 +2011,7 @@ a1log *log			/* verb, debug & error log */
 							return -1;
 						}
 						if (ch != 0x0d && ch != 0x0a) { 			/* !Cr */
+							update_led_state(it, inst_led_row_fail);
 							printf("\n");
 							continue;
 						}
@@ -1995,6 +2022,7 @@ a1log *log			/* verb, debug & error log */
 					/* Must be OK - save the readings */
 					if (cap2 & inst2_no_feedback)
 						good_beep();
+					update_led_state(it, inst_led_row_success);
 					printf(" Strip read OK");
 					if (boff != 0)
 						printf(" (DTP51 offset fix of %d applied)",boff);
@@ -2048,6 +2076,7 @@ a1log *log			/* verb, debug & error log */
 
 
 		}		/* Go around to read another row */
+		update_led_state(it, inst_led_off);
 		free(vals);
 
 	/* -------------------------------------------------- */
@@ -2065,8 +2094,10 @@ a1log *log			/* verb, debug & error log */
 
 			/* Do any needed calibration before the user places the instrument on a desired spot */
 			if (it->needs_calibration(it) & inst_calt_n_dfrble_mask) {
+				update_led_state(it, inst_led_cal_wait);
 				if ((rv = inst_handle_calibrate(it, inst_calt_needed, inst_calc_none, NULL, NULL, 0))
 				                                                                    != inst_ok) {
+					update_led_state(it, inst_led_off);
 					printf("\nCalibration failed with error :'%s' (%s)\n",
 		       	       it->inst_interp_error(it, rv), it->interp_error(it, rv));
 					it->del(it);
@@ -2074,6 +2105,7 @@ a1log *log			/* verb, debug & error log */
 						free(pfname);
 					return -1;
 				}
+				update_led_state(it, inst_led_off);
 			}
 	
 			/* Enable (switch or user) via uicallback trigger if possible */
@@ -2302,7 +2334,9 @@ a1log *log			/* verb, debug & error log */
 					if (cap2 & inst2_no_feedback)
 						bad_beep();
 					printf("\nSpot read failed because instruments needs calibration\n");
+					update_led_state(it, inst_led_cal_wait);
 					ev = inst_handle_calibrate(it, inst_calt_needed, inst_calc_none, NULL, NULL, 0);
+					update_led_state(it, inst_led_off);
 					if (ev != inst_ok) {	/* Abort or fatal error */
 						it->del(it);
 						if (pfname != NULL)
@@ -2312,12 +2346,14 @@ a1log *log			/* verb, debug & error log */
 					continue;
 				/* Deal with a misread */
 				} else if ((rv & inst_mask) == inst_misread) {
+					update_led_state(it, inst_led_row_fail);
 					if (cap2 & inst2_no_feedback)
 						bad_beep();
 					empty_con_chars();
 					printf("\nStrip read failed due to misread (%s)\n",it->interp_error(it, rv));
 					printf("Hit Esc or 'q' to give up, any other key to retry:%s",fl_end); do_fflush();
 					if ((ch = next_con_char()) == 0x1b || ch == 0x3 || ch == 'q' || ch == 'Q') {
+						update_led_state(it, inst_led_off);
 						printf("\n");
 						it->del(it);
 						if (pfname != NULL)
@@ -2328,12 +2364,14 @@ a1log *log			/* verb, debug & error log */
 					continue;
 				/* Deal with a communications error */
 				} else if ((rv & inst_mask) == inst_coms_fail) {
+					update_led_state(it, inst_led_row_fail);
 					if (cap2 & inst2_no_feedback)
 						bad_beep();
 					empty_con_chars();
 					printf("\nStrip read failed due to communication problem.\n");
 					printf("Hit Esc or 'q' to give up, any other key to retry:%s",fl_end); do_fflush();
 					if ((ch = next_con_char()) == 0x1b || ch == 0x3 || ch == 'q' || ch == 'Q') {
+						update_led_state(it, inst_led_off);
 						printf("\n");
 						it->del(it);
 						if (pfname != NULL)
@@ -2369,12 +2407,14 @@ a1log *log			/* verb, debug & error log */
 
 				} else {
 					/* Some other error. Treat it as fatal */
+					update_led_state(it, inst_led_row_fail);
 					if (cap2 & inst2_no_feedback)
 						bad_beep();
 					printf("\nPatch read failed due unexpected error :'%s' (%s)\n",
 			       	       it->inst_interp_error(it, rv), it->interp_error(it, rv));
 					printf("Hit Esc or 'q' to give up, any other key to retry:%s",fl_end); do_fflush();
 					if ((ch = next_con_char()) == 0x1b || ch == 0x3 || ch == 'q' || ch == 'Q') {
+						update_led_state(it, inst_led_off);
 						printf("\n");
 						it->del(it);
 						if (pfname != NULL)
@@ -2390,6 +2430,7 @@ a1log *log			/* verb, debug & error log */
 				empty_con_chars();
 				printf("\nAbort ? - Are you sure ? [y/n]:%s",fl_end); do_fflush();
 				if ((ch = next_con_char()) == 'y' || ch == 'Y') {
+					update_led_state(it, inst_led_off);
 					printf("\n");
 					it->del(it);
 					if (pfname != NULL)
@@ -2401,7 +2442,9 @@ a1log *log			/* verb, debug & error log */
 			} else if (ch == 'k') {
 				inst_code ev;
 
+				update_led_state(it, inst_led_cal_wait);
 				ev = inst_handle_calibrate(it, inst_calt_available, inst_calc_none, NULL, NULL, 0);
+				update_led_state(it, inst_led_off);
 				if (ev != inst_ok) {	/* Abort or fatal error */
 					it->del(it);
 					if (pfname != NULL)
@@ -2556,6 +2599,7 @@ a1log *log			/* verb, debug & error log */
 	/* -------------------------------------------------- */
 
 	/* clean up */
+	update_led_state(it, inst_led_off);
 	if (it != NULL)
 		it->del(it);
 	if (pfname != NULL)
@@ -2621,7 +2665,7 @@ usage() {
 	}
 	fprintf(stderr," -T ratio         Modify strip patch consistency tolerance by ratio\n");
 	fprintf(stderr," -S               Suppress wrong strip & unexpected value warnings\n");
-//	fprintf(stderr," -Y U             Test i1pro2 UV measurement mode\n");
+	fprintf(stderr," -Y l             Enable i1Pro 2 visual LED feedback\n");
 	fprintf(stderr," -W n|h|x         Override serial port flow control: n = none, h = HW, x = Xon/Xoff\n");
 #ifndef SALONEINSTLIB
 	fprintf(stderr," -P               Plot spectral if patch by patch\n");
@@ -2902,7 +2946,9 @@ int main(int argc, char *argv[]) {
 				if (na == NULL)
 					usage();	/* "Parameter expected after -Y" */
 
-				{
+				if (na[0] == 'l' || na[0] == 'L') {
+					g_use_leds = 1;
+				} else {
 					usage();	/* "-Y parameter '%c' not recognised",na[0] */
 				}
 			}
