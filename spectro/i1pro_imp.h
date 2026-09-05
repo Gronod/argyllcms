@@ -340,6 +340,13 @@ struct _i1proimp {
 	volatile double whitestamp;	/* meas_delay() white timestamp */
 	volatile double trigstamp;	/* meas_delay() trigger timestamp */
 
+	/* Visual LED feedback thread management */
+	athread        *led_th;
+	int             led_th_run;
+	int             led_th_init;
+	amutex          led_lock;
+	inst_led_state  current_led_state;
+
 }; typedef struct _i1proimp i1proimp;
 
 /* Add an implementation structure */
@@ -535,6 +542,8 @@ i1pro_code i1pro_set_stdres(i1pro *p);
 /* Modify the scan consistency tollerance */
 i1pro_code i1pro_set_scan_toll(i1pro *p, double toll_ratio);
 
+/* Set device indicator LED status */
+i1pro_code i1pro_imp_set_led_state(i1pro *p, inst_led_state state);
 
 /* Update the single remission calibration and instrument usage log */
 i1pro_code i1pro_update_log(i1pro *p);

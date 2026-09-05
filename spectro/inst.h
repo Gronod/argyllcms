@@ -371,6 +371,9 @@ typedef enum {
 
 } inst2_capability;
 
+/* Capability alias for instrument indicator LED status feedback */
+#define INST_CAP_LED_STATUS inst2_has_leds
+
 /* Instrument capabilities 3 (room for expansion) */
 /* (Available capabilities may be mode dependent) */
 typedef enum {
@@ -557,6 +560,15 @@ typedef enum {
 
 
 } inst_opt_type;
+
+/* Generic Instrument LED Status States */
+typedef enum {
+	inst_led_off           = 0,
+	inst_led_cal_wait      = 1, /* Flashing White */
+	inst_led_row_ready     = 2, /* Flashing Blue  */
+	inst_led_row_fail      = 3, /* Flashing Red   */
+	inst_led_row_success   = 4  /* Solid/Flash Green */
+} inst_led_state;
 
 /* Optional manufacturers instrument filter fitted to instrument (for inst_opt_set_filter) */
 /* These could be physical (i.e. Spectrolino, i1Pro3), or they could be virtual (i.e. i1Pro3) */  
@@ -1169,6 +1181,9 @@ typedef struct _inst_meascondsel {
 	/* Return the last serial communication error code */						\
 	/* (This is used for deciding fallback/retry strategies) */					\
 	int (*last_scomerr)(struct _inst *p);										\
+																				\
+	/* Set device indicator LED status (if supported) */						\
+	inst_code (*set_led_state)(struct _inst *p, inst_led_state state);			\
 																				\
 	/* Destroy ourselves */														\
 	void (*del)(struct _inst *p);												\

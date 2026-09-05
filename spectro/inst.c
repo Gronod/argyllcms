@@ -589,6 +589,11 @@ static inst_config config_enum(inst *p, int ec) {
 	return inst_conf_unknown;
 }
 
+/* Set device indicator LED status (default implementation) */
+static inst_code set_led_state(inst *p, inst_led_state state) {
+	return inst_unsupported;
+}
+
 /* ---------------------------------------------- */
 
 /* Delete things set/done by new_inst() */
@@ -824,6 +829,8 @@ void *cntx			/* Context for callback */
 		p->last_scomerr = last_scomerr;
 	if (p->config_enum == NULL)
 		p->config_enum = config_enum;
+	if (p->set_led_state == NULL)
+		p->set_led_state = set_led_state;
 
 	/* Set the provided user interaction callback */
 	p->set_uicallback(p, uicallback, cntx);
