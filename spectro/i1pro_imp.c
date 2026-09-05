@@ -443,6 +443,21 @@ i1pro_stop_threads(i1pro *p) {
 		m->trig_thread = NULL;
 		a1logd(p->log,5,"i1pro trigger thread terminated\n");
 	}
+
+	/* Stop the LED status feedback thread if running */
+	if (m->led_th != NULL) {
+		m->led_th_run = 0;
+		if (m->led_th->wait != NULL)
+			m->led_th->wait(m->led_th);
+		if (m->led_th->del != NULL)
+			m->led_th->del(m->led_th);
+		m->led_th = NULL;
+		a1logd(p->log,5,"i1pro led thread terminated\n");
+	}
+	if (m->led_th_init) {
+		amutex_del(m->led_lock);
+		m->led_th_init = 0;
+	}
 }
 
 /* Stop any pending I/O, shut down the instrument hardware, and close the */
@@ -12407,10 +12422,16 @@ i1pro2_stop_ruler(void *pp, int parm) {
 static int
 i1pro2_indLEDseq(void *pp, unsigned char *buf, int size) {
 	i1pro *p = (i1pro *)pp;
-	i1proimp *m = (i1proimp *)p->m;
+	i1proimp *m;
 	int rwbytes;			/* Data bytes written */
 	unsigned char pbuf[4];	/* Number of bytes being send */
 	int se, rv = I1PRO_OK;
+
+	if (p == NULL || p->m == NULL || p->icom == NULL || !p->icom->is_open
+	 || p->icom->usb_control == NULL || p->icom->usb_write == NULL) {
+		return I1PRO_INT_NO_COMS;
+	}
+	m = (i1proimp *)p->m;
 
 	int2buf(pbuf, size); 
 
@@ -12463,6 +12484,173 @@ i1pro2_indLEDoff(void *pp) {
 	a1logd(p->log,2,"i1pro2_indLEDoff: returning ICOM err 0x%x\n",rv);
 
 	return rv;
+}
+
+/* Set indicator LEDs to a solid color mask (or off if mask is 0) */
+static int
+i1pro2_indLEDset(void *pp, unsigned char mask) {
+	i1pro *p = (i1pro *)pp;
+	int rv = I1PRO_OK;
+	unsigned char seq[] = {
+		0x00, 0x00, 0x00, 0x01,
+
+		0x00, 0x00, 0x00, 0x0a,
+		0xff, 0xff, 0xff, 0xff,
+		0x00, 0x36, 0x40,
+		0x00, 0x00, 0x01
+	};
+
+	if (mask == 0)
+		return i1pro2_indLEDoff(pp);
+
+	seq[12] = mask;
+
+	a1logd(p->log,3,"i1pro2_indLEDset: called with mask 0x%02x\n", mask);
+	rv = i1pro2_indLEDseq(p, seq, sizeof(seq));
+	a1logd(p->log,3,"i1pro2_indLEDset: returning ICOM err 0x%x\n", rv);
+
+	return rv;
+}
+
+/* Helper to sleep up to ms while checking if state changed or thread stopping */
+static void
+led_sleep_ms(i1proimp *m, inst_led_state state, int ms) {
+	int elapsed = 0;
+	while (m->led_th_run && elapsed < ms) {
+		inst_led_state cur;
+		amutex_lock(m->led_lock);
+		cur = m->current_led_state;
+		amutex_unlock(m->led_lock);
+		if (cur != state)
+			break;
+		msec_sleep(20);
+		elapsed += 20;
+	}
+}
+
+/* Worker thread for asynchronous LED pulsing / patterns */
+static int
+i1pro2_led_thread(void *context) {
+	i1pro *p = (i1pro *)context;
+	i1proimp *m;
+	int phase = 0;
+	int i;
+
+	if (p == NULL || p->m == NULL)
+		return 0;
+	m = (i1proimp *)p->m;
+
+	a1logd(p->log, 3, "i1pro2_led_thread started\n");
+
+	while (m->led_th_run) {
+		inst_led_state state;
+
+		amutex_lock(m->led_lock);
+		state = m->current_led_state;
+		amutex_unlock(m->led_lock);
+
+		switch (state) {
+			case inst_led_cal_wait:
+				/* White flashing: 500ms ON / 500ms OFF (1.0 Hz) */
+				if (phase % 2 == 0)
+					i1pro2_indLEDset(p, 0x3F);		/* White = both Red+Green+Blue */
+				else
+					i1pro2_indLEDoff(p);
+				led_sleep_ms(m, inst_led_cal_wait, 500);
+				phase++;
+				break;
+
+			case inst_led_row_ready:
+				/* Blue pulsing: 300ms ON / 700ms OFF (1.0 Hz) */
+				i1pro2_indLEDset(p, 0x24);			/* Blue = both Left & Right Blue */
+				led_sleep_ms(m, inst_led_row_ready, 300);
+				i1pro2_indLEDoff(p);
+				led_sleep_ms(m, inst_led_row_ready, 700);
+				phase = 0;
+				break;
+
+			case inst_led_row_fail:
+				/* Red rapid strobe: 3 short bursts (100ms ON / 100ms OFF, 600ms total) */
+				for (i = 0; i < 3 && m->led_th_run; i++) {
+					i1pro2_indLEDset(p, 0x09);		/* Red = both Left & Right Red */
+					msec_sleep(100);
+					i1pro2_indLEDoff(p);
+					msec_sleep(100);
+				}
+				/* Revert to off until next command */
+				amutex_lock(m->led_lock);
+				if (m->current_led_state == inst_led_row_fail)
+					m->current_led_state = inst_led_off;
+				amutex_unlock(m->led_lock);
+				phase = 0;
+				break;
+
+			case inst_led_row_success:
+				/* Green pulse: Solid confirmation illumination for 400ms */
+				i1pro2_indLEDset(p, 0x12);			/* Green = both Left & Right Green */
+				msec_sleep(400);
+				i1pro2_indLEDoff(p);
+
+				/* Revert to off until next command */
+				amutex_lock(m->led_lock);
+				if (m->current_led_state == inst_led_row_success)
+					m->current_led_state = inst_led_off;
+				amutex_unlock(m->led_lock);
+				phase = 0;
+				break;
+
+			case inst_led_off:
+			default:
+				i1pro2_indLEDoff(p);
+				led_sleep_ms(m, inst_led_off, 100);
+				phase = 0;
+				break;
+		}
+	}
+
+	/* Extinguish LEDs upon thread exit if port is still open */
+	if (p->icom != NULL && p->icom->is_open)
+		i1pro2_indLEDoff(p);
+
+	a1logd(p->log, 3, "i1pro2_led_thread exiting\n");
+	return 0;
+}
+
+/* Set indicator LED status */
+i1pro_code
+i1pro_imp_set_led_state(i1pro *p, inst_led_state state) {
+	i1proimp *m;
+
+	if (p == NULL || p->m == NULL)
+		return I1PRO_INT_NO_COMS;
+	m = (i1proimp *)p->m;
+
+	if (p->dtype != instI1Pro2)
+		return I1PRO_UNSUPPORTED;
+
+	if (!m->led_th_init) {
+		amutex_init(m->led_lock);
+		m->led_th_init = 1;
+	}
+
+	amutex_lock(m->led_lock);
+	m->current_led_state = state;
+	amutex_unlock(m->led_lock);
+
+	/* If thread is not yet running and state is not off, start worker thread */
+	if (m->led_th == NULL && state != inst_led_off) {
+		m->led_th_run = 1;
+		if ((m->led_th = new_athread(i1pro2_led_thread, (void *)p)) == NULL) {
+			a1logd(p->log, 1, "i1pro_imp_set_led_state: new_athread failed\n");
+			return I1PRO_INT_THREADFAILED;
+		}
+	} else if (state == inst_led_off && m->led_th == NULL) {
+		/* Directly extinguish LEDs if port is open */
+		if (p->icom != NULL && p->icom->is_open)
+			i1pro2_indLEDoff(p);
+	}
+
+	return I1PRO_OK;
 }
 
 #ifdef NEVER
