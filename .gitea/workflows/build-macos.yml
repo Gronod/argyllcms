@@ -31,7 +31,7 @@ jobs:
           export OSTYPE=darwin
           export MACHTYPE=x86_64-apple-darwin
           export HOSTTYPE=x86_64
-          export CCOPTFLAG="-O0"
+          export CCOPTFLAG="-O0 -Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=implicit-int"
           jam -q -d2 -fJambase -j1 -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Ad-hoc Sign & Verify Binaries
@@ -60,6 +60,8 @@ jobs:
           export OSTYPE=darwin
           export MACHTYPE=x86_64-apple-darwin
           export HOSTTYPE=x86_64
+          export CCOPTFLAG="-O0 -Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=implicit-int"
+          export NO_BUILD=1
           ./makepackagebin.sh
           TAG="${{ github.ref_name }}"
           SHORT_SHA="$(git rev-parse --short HEAD)"
