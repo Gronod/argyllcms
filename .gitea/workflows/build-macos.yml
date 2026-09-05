@@ -41,6 +41,22 @@ jobs:
           export MACHTYPE=${{ matrix.machtype }}
           export HOSTTYPE=${{ matrix.arch }}
           export CCOPTFLAG="-O0 -Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=implicit-int"
+
+          # Pre-generate code-generator outputs using host compiler if needed
+          if [ ! -f tiff/libtiff/tif_fax3sm.c ]; then
+            echo "Pre-generating tiff/libtiff/tif_fax3sm.c using host compiler..."
+            (cd tiff && chmod +x configure && ./configure --disable-old-jpeg --disable-pixarlog --disable-zlib --disable-jbig --disable-lzma) >/dev/null 2>&1 || true
+            cc -Itiff/libtiff tiff/libtiff/mkg3states.c tiff/port/strcasecmp.c -o tiff/mkg3states
+            tiff/mkg3states -c const tiff/libtiff/tif_fax3sm.c
+            rm -f tiff/mkg3states
+          fi
+          if [ ! -f imdi/imdi_k.h ] || [ ! -f imdi/imdi_k.c ]; then
+            echo "Pre-generating imdi kernel files using host compiler..."
+            cc -Ih -Inumlib imdi/imdi_make.c imdi/imdi_gen.c imdi/cgen.c -o imdi/imdi_make
+            (cd imdi && ./imdi_make -f -d .)
+            rm -f imdi/imdi_make
+          fi
+
           jam -q -d2 -fJambase -j1 -sBUILTIN_TIFF=true -sBUILTIN_JPEG=true -sBUILTIN_PNG=true -sBUILTIN_Z=true -sBUILTIN_SSL=true install
           
       - name: Ad-hoc Sign & Verify Binaries
@@ -58,10 +74,26 @@ jobs:
           ARGYLL_NOT_INTERACTIVE: "1"
           ARGYLL_EXCLUDE_SERIAL_SCAN: "1"
         run: |
-          ./bin/dispcal -? || true
-          ./bin/chartread -? || true
-          ./bin/colprof -? || true
-          ./bin/targen -? || true
+          HOST_ARCH="$(uname -m)"
+          if [ "${{ matrix.arch }}" = "$HOST_ARCH" ]; then
+            echo "Running native execution smoke tests for ${{ matrix.arch }}..."
+            ./bin/dispcal -? || true
+            ./bin/chartread -? || true
+            ./bin/colprof -? || true
+            ./bin/targen -? || true
+          else
+            echo "Skipping execution smoke tests when cross-compiling (${{ matrix.arch }} on $HOST_ARCH)."
+          fi
+          echo "Verifying Mach-O binary architectures match ${{ matrix.arch }}:"
+          for f in bin/*; do
+            if [ -f "$f" ] && file "$f" | grep -q "Mach-O"; then
+              echo "$f: $(file -b "$f")"
+              if ! file "$f" | grep -q "${{ matrix.arch }}"; then
+                echo "ERROR: $f architecture does not match expected ${{ matrix.arch }}!"
+                exit 1
+              fi
+            fi
+          done
           
       - name: Package Release
         run: |
@@ -160,7 +192,11 @@ jobs:
           echo "=== Binary Architecture & Signature Verification ==="
           for file in bin/*; do
             if [ -f "$file" ] && file "$file" | grep -q "Mach-O"; then
-              file "$file"
+              echo "$file: $(file -b "$file")"
+              if ! file "$file" | grep -q "universal binary"; then
+                echo "ERROR: $file is not a universal binary!"
+                exit 1
+              fi
               codesign -dvv "$file"
             fi
           done

@@ -31,12 +31,14 @@ ObjectKeep port/getopt.c ;
 ObjectKeep port/strcasecmp.c ;
 
 # generation utilities (don't use libport ! - there will be dependency problems for Xcompile!)
-if $(UNIX) {
-	Main mkg3states : libtiff/mkg3states.c [ CatPaths port : strcasecmp.c ] ;
-} else {
-	Main mkg3states : libtiff/mkg3states.c [ CatPaths port : getopt.c strcasecmp.c ] ;
+if ! [ GLOB tiff/libtiff : tif_fax3sm.c ] {
+	if $(UNIX) {
+		Main mkg3states : libtiff/mkg3states.c [ CatPaths port : strcasecmp.c ] ;
+	} else {
+		Main mkg3states : libtiff/mkg3states.c [ CatPaths port : getopt.c strcasecmp.c ] ;
+	}
+	GenFileND libtiff/tif_fax3sm.c : mkg3states -c const [ NormPaths libtiff/tif_fax3sm.c ] ;
 }
-GenFileND libtiff/tif_fax3sm.c : mkg3states -c const [ NormPaths libtiff/tif_fax3sm.c ] ;
 
 # support library for tools
 if $(UNIX) {
