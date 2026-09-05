@@ -16,14 +16,18 @@ jobs:
         
       - name: Install ftjam
         run: |
-          wget -q -O ftjam.tar.gz https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2.tar.gz/download
+          curl -fsSL -o ftjam.tar.gz https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2.tar.gz/download || wget --no-check-certificate -q -O ftjam.tar.gz https://sourceforge.net/projects/freetype/files/ftjam/2.5.2/ftjam-2.5.2.tar.gz/download
           tar -xzf ftjam.tar.gz
           cd ftjam-2.5.2
-          make CC="cc -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-implicit-int"
-          sudo cp bin.*/jam /usr/local/bin/jam
+          make jam0 CC="cc -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-implicit-int"
+          mkdir -p "$HOME/.local/bin"
+          cp jam0 "$HOME/.local/bin/jam"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          cp jam0 /usr/local/bin/jam 2>/dev/null || true
           
       - name: Build ArgyllCMS
         run: |
+          export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
           export OSTYPE=darwin
           export MACHTYPE=x86_64-apple-darwin
           export HOSTTYPE=x86_64
@@ -52,6 +56,7 @@ jobs:
           
       - name: Package Release
         run: |
+          export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
           export OSTYPE=darwin
           export MACHTYPE=x86_64-apple-darwin
           export HOSTTYPE=x86_64
